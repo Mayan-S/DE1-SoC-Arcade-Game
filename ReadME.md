@@ -1,7 +1,32 @@
-Program Files:
-- vga_demo.v
-- vga_adapter/vga_pll.v
-- vga_adapter/vga_adapter.v
-- vga_adapter/vga_address_translator.v
-- vga_adapter/vga_controller.v
+## Overview
 
+Navigate your spaceship through waves of asteroids coming from all four directions. The game tests your reflexes and navigation skills as you try to survive as long as possible. Your survival time is displayed on the board's HEX displays, tracking every second you stay alive.
+
+## Hardware Requirements
+
+- **FPGA Board**: DE1-SoC Development Board
+- **Display**: VGA-compatible monitor
+- **Input**: PS/2 Keyboard
+- **Clock**: 50MHz system clock
+
+## How to Play
+
+### Controls
+
+- **W** - Move forward 
+- **A** - Turn left 
+- **S** - Move backward
+- **D** - Turn right
+- **KEY[0]** - Reset game
+
+### Gameplay
+
+1. **Start**: The game begins automatically when powered on
+2. **Movement**: Use WASD keys to navigate your spaceship around the 640×480 screen
+3. **Objective**: Dodge the asteroids coming from all four sides of the screen
+4. **Rotation**: Your ship sprite rotates to face the direction you're moving
+5. **Collision**: The game freezes when your ship collides with any asteroid
+6. **Timer**: The HEX displays count up from 000000, showing your survival time in seconds
+7. **Reset**: Press KEY[0] to clear the screen and restart
+
+### Pictures
