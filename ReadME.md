@@ -31,6 +31,6 @@ The complete Verilog implementation can be found in the 'Game_Code' directory.
 6. **Timer**: The HEX displays count up from 000000, showing your survival time in seconds
 7. **Reset**: Press KEY[0] to clear the screen and restart
 
-### Picture
+### Demo
 ![20260107_205118](https://github.com/user-attachments/assets/2e8057c6-02f0-4d5f-a76b-05231ea0d059)
 
