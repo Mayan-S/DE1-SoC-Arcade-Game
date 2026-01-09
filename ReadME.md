@@ -2,6 +2,8 @@
 
 Navigate your spaceship through waves of asteroids coming from all four directions. The game tests your reflexes and navigation skills as you try to survive as long as possible. Your survival time is displayed on the board's HEX displays, tracking every second you stay alive.
 
+The complete Verilog implementation can be found in the `Game_Code` directory.
+
 ## Hardware Requirements
 
 - **FPGA Board**: DE1-SoC Development Board
@@ -29,4 +31,4 @@ Navigate your spaceship through waves of asteroids coming from all four directio
 6. **Timer**: The HEX displays count up from 000000, showing your survival time in seconds
 7. **Reset**: Press KEY[0] to clear the screen and restart
 
-### Pictures
+### Picture
