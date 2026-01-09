@@ -1,8 +1,8 @@
-## Overview
+![20260107_205118](https://github.com/user-attachments/assets/2c952a39-22c9-4d1b-bd0d-6911ad5f4d9c)## Overview
 
 Navigate your spaceship through waves of asteroids coming from all four directions. The game tests your reflexes and navigation skills as you try to survive as long as possible. Your survival time is displayed on the board's HEX displays, tracking every second you stay alive.
 
-The complete Verilog implementation can be found in the `Game_Code` directory.
+The complete Verilog implementation can be found in the 'Game_Code' directory.
 
 ## Hardware Requirements
 
@@ -32,3 +32,5 @@ The complete Verilog implementation can be found in the `Game_Code` directory.
 7. **Reset**: Press KEY[0] to clear the screen and restart
 
 ### Picture
+![20260107_205118](https://github.com/user-attachments/assets/2e8057c6-02f0-4d5f-a76b-05231ea0d059)
+
