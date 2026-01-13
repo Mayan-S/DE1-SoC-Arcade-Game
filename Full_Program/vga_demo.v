@@ -21,6 +21,17 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
     wire ship_done;
     wire [nX-1:0] ship_pos_x;  // Ship center position for collision
     wire [nY-1:0] ship_pos_y;
+    wire [1:0] ship_direction;  // Ship facing direction for bullet
+    
+    // Bullet signals - 4 bullets for rapid fire
+    wire [nX-1:0] bullet1_x, bullet2_x, bullet3_x, bullet4_x;
+    wire [nY-1:0] bullet1_y, bullet2_y, bullet3_y, bullet4_y;
+    wire [8:0] bullet1_colour, bullet2_colour, bullet3_colour, bullet4_colour;
+    wire bullet1_write, bullet2_write, bullet3_write, bullet4_write;
+    wire bullet1_done, bullet2_done, bullet3_done, bullet4_done;
+    wire bullet1_active, bullet2_active, bullet3_active, bullet4_active;
+    wire [nX-1:0] bullet1_pos_x, bullet2_pos_x, bullet3_pos_x, bullet4_pos_x;
+    wire [nY-1:0] bullet1_pos_y, bullet2_pos_y, bullet3_pos_y, bullet4_pos_y;
     
     // Asteroid signals - from top (moving down)
     wire [nX-1:0] ast_down1_x, ast_down2_x, ast_down3_x, ast_down4_x;
@@ -66,6 +77,7 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
     
     // Grant signals for round-robin
     reg gntShip, gntD1, gntD2, gntD3, gntD4, gntU1, gntU2, gntU3, gntU4, gntR1, gntR2, gntR3, gntR4, gntL1, gntL2, gntL3, gntL4;
+    reg gntB1, gntB2, gntB3, gntB4;
     reg [4:0] select;
     
     // PS2 keyboard signals
@@ -154,6 +166,172 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
                        coll_u1 | coll_u2 | coll_u3 | coll_u4 |
                        coll_r1 | coll_r2 | coll_r3 | coll_r4 |
                        coll_l1 | coll_l2 | coll_l3 | coll_l4;
+    
+    // ============ BULLET-ASTEROID COLLISION DETECTION ============
+    // Check all 4 bullets against all 16 asteroids
+    wire hit_d1, hit_d2, hit_d3, hit_d4;
+    wire hit_u1, hit_u2, hit_u3, hit_u4;
+    wire hit_r1, hit_r2, hit_r3, hit_r4;
+    wire hit_l1, hit_l2, hit_l3, hit_l4;
+    
+    // Which bullets hit which asteroids (for deactivating bullets)
+    wire b1_hit_any, b2_hit_any, b3_hit_any, b4_hit_any;
+    
+    // Bullet hits asteroid if distance < 9 pixels (bullet is 2x2, asteroid is 16x16)
+    function bullet_hit_check;
+        input [9:0] bx, ax;
+        input [8:0] by, ay;
+        input active;
+        reg [9:0] dx;
+        reg [8:0] dy;
+        begin
+            if (!active)
+                bullet_hit_check = 1'b0;
+            else begin
+                dx = (bx > ax) ? (bx - ax) : (ax - bx);
+                dy = (by > ay) ? (by - ay) : (ay - by);
+                bullet_hit_check = (dx < 10'd9) && (dy < 9'd9);
+            end
+        end
+    endfunction
+    
+    // Check each asteroid against all 4 bullets - asteroid respawns if ANY bullet hits it
+    assign hit_d1 = bullet_hit_check(bullet1_pos_x, ast_down1_pos_x, bullet1_pos_y, ast_down1_pos_y, bullet1_active) |
+                    bullet_hit_check(bullet2_pos_x, ast_down1_pos_x, bullet2_pos_y, ast_down1_pos_y, bullet2_active) |
+                    bullet_hit_check(bullet3_pos_x, ast_down1_pos_x, bullet3_pos_y, ast_down1_pos_y, bullet3_active) |
+                    bullet_hit_check(bullet4_pos_x, ast_down1_pos_x, bullet4_pos_y, ast_down1_pos_y, bullet4_active);
+    assign hit_d2 = bullet_hit_check(bullet1_pos_x, ast_down2_pos_x, bullet1_pos_y, ast_down2_pos_y, bullet1_active) |
+                    bullet_hit_check(bullet2_pos_x, ast_down2_pos_x, bullet2_pos_y, ast_down2_pos_y, bullet2_active) |
+                    bullet_hit_check(bullet3_pos_x, ast_down2_pos_x, bullet3_pos_y, ast_down2_pos_y, bullet3_active) |
+                    bullet_hit_check(bullet4_pos_x, ast_down2_pos_x, bullet4_pos_y, ast_down2_pos_y, bullet4_active);
+    assign hit_d3 = bullet_hit_check(bullet1_pos_x, ast_down3_pos_x, bullet1_pos_y, ast_down3_pos_y, bullet1_active) |
+                    bullet_hit_check(bullet2_pos_x, ast_down3_pos_x, bullet2_pos_y, ast_down3_pos_y, bullet2_active) |
+                    bullet_hit_check(bullet3_pos_x, ast_down3_pos_x, bullet3_pos_y, ast_down3_pos_y, bullet3_active) |
+                    bullet_hit_check(bullet4_pos_x, ast_down3_pos_x, bullet4_pos_y, ast_down3_pos_y, bullet4_active);
+    assign hit_d4 = bullet_hit_check(bullet1_pos_x, ast_down4_pos_x, bullet1_pos_y, ast_down4_pos_y, bullet1_active) |
+                    bullet_hit_check(bullet2_pos_x, ast_down4_pos_x, bullet2_pos_y, ast_down4_pos_y, bullet2_active) |
+                    bullet_hit_check(bullet3_pos_x, ast_down4_pos_x, bullet3_pos_y, ast_down4_pos_y, bullet3_active) |
+                    bullet_hit_check(bullet4_pos_x, ast_down4_pos_x, bullet4_pos_y, ast_down4_pos_y, bullet4_active);
+    
+    assign hit_u1 = bullet_hit_check(bullet1_pos_x, ast_up1_pos_x, bullet1_pos_y, ast_up1_pos_y, bullet1_active) |
+                    bullet_hit_check(bullet2_pos_x, ast_up1_pos_x, bullet2_pos_y, ast_up1_pos_y, bullet2_active) |
+                    bullet_hit_check(bullet3_pos_x, ast_up1_pos_x, bullet3_pos_y, ast_up1_pos_y, bullet3_active) |
+                    bullet_hit_check(bullet4_pos_x, ast_up1_pos_x, bullet4_pos_y, ast_up1_pos_y, bullet4_active);
+    assign hit_u2 = bullet_hit_check(bullet1_pos_x, ast_up2_pos_x, bullet1_pos_y, ast_up2_pos_y, bullet1_active) |
+                    bullet_hit_check(bullet2_pos_x, ast_up2_pos_x, bullet2_pos_y, ast_up2_pos_y, bullet2_active) |
+                    bullet_hit_check(bullet3_pos_x, ast_up2_pos_x, bullet3_pos_y, ast_up2_pos_y, bullet3_active) |
+                    bullet_hit_check(bullet4_pos_x, ast_up2_pos_x, bullet4_pos_y, ast_up2_pos_y, bullet4_active);
+    assign hit_u3 = bullet_hit_check(bullet1_pos_x, ast_up3_pos_x, bullet1_pos_y, ast_up3_pos_y, bullet1_active) |
+                    bullet_hit_check(bullet2_pos_x, ast_up3_pos_x, bullet2_pos_y, ast_up3_pos_y, bullet2_active) |
+                    bullet_hit_check(bullet3_pos_x, ast_up3_pos_x, bullet3_pos_y, ast_up3_pos_y, bullet3_active) |
+                    bullet_hit_check(bullet4_pos_x, ast_up3_pos_x, bullet4_pos_y, ast_up3_pos_y, bullet4_active);
+    assign hit_u4 = bullet_hit_check(bullet1_pos_x, ast_up4_pos_x, bullet1_pos_y, ast_up4_pos_y, bullet1_active) |
+                    bullet_hit_check(bullet2_pos_x, ast_up4_pos_x, bullet2_pos_y, ast_up4_pos_y, bullet2_active) |
+                    bullet_hit_check(bullet3_pos_x, ast_up4_pos_x, bullet3_pos_y, ast_up4_pos_y, bullet3_active) |
+                    bullet_hit_check(bullet4_pos_x, ast_up4_pos_x, bullet4_pos_y, ast_up4_pos_y, bullet4_active);
+    
+    assign hit_r1 = bullet_hit_check(bullet1_pos_x, ast_right1_pos_x, bullet1_pos_y, ast_right1_pos_y, bullet1_active) |
+                    bullet_hit_check(bullet2_pos_x, ast_right1_pos_x, bullet2_pos_y, ast_right1_pos_y, bullet2_active) |
+                    bullet_hit_check(bullet3_pos_x, ast_right1_pos_x, bullet3_pos_y, ast_right1_pos_y, bullet3_active) |
+                    bullet_hit_check(bullet4_pos_x, ast_right1_pos_x, bullet4_pos_y, ast_right1_pos_y, bullet4_active);
+    assign hit_r2 = bullet_hit_check(bullet1_pos_x, ast_right2_pos_x, bullet1_pos_y, ast_right2_pos_y, bullet1_active) |
+                    bullet_hit_check(bullet2_pos_x, ast_right2_pos_x, bullet2_pos_y, ast_right2_pos_y, bullet2_active) |
+                    bullet_hit_check(bullet3_pos_x, ast_right2_pos_x, bullet3_pos_y, ast_right2_pos_y, bullet3_active) |
+                    bullet_hit_check(bullet4_pos_x, ast_right2_pos_x, bullet4_pos_y, ast_right2_pos_y, bullet4_active);
+    assign hit_r3 = bullet_hit_check(bullet1_pos_x, ast_right3_pos_x, bullet1_pos_y, ast_right3_pos_y, bullet1_active) |
+                    bullet_hit_check(bullet2_pos_x, ast_right3_pos_x, bullet2_pos_y, ast_right3_pos_y, bullet2_active) |
+                    bullet_hit_check(bullet3_pos_x, ast_right3_pos_x, bullet3_pos_y, ast_right3_pos_y, bullet3_active) |
+                    bullet_hit_check(bullet4_pos_x, ast_right3_pos_x, bullet4_pos_y, ast_right3_pos_y, bullet4_active);
+    assign hit_r4 = bullet_hit_check(bullet1_pos_x, ast_right4_pos_x, bullet1_pos_y, ast_right4_pos_y, bullet1_active) |
+                    bullet_hit_check(bullet2_pos_x, ast_right4_pos_x, bullet2_pos_y, ast_right4_pos_y, bullet2_active) |
+                    bullet_hit_check(bullet3_pos_x, ast_right4_pos_x, bullet3_pos_y, ast_right4_pos_y, bullet3_active) |
+                    bullet_hit_check(bullet4_pos_x, ast_right4_pos_x, bullet4_pos_y, ast_right4_pos_y, bullet4_active);
+    
+    assign hit_l1 = bullet_hit_check(bullet1_pos_x, ast_left1_pos_x, bullet1_pos_y, ast_left1_pos_y, bullet1_active) |
+                    bullet_hit_check(bullet2_pos_x, ast_left1_pos_x, bullet2_pos_y, ast_left1_pos_y, bullet2_active) |
+                    bullet_hit_check(bullet3_pos_x, ast_left1_pos_x, bullet3_pos_y, ast_left1_pos_y, bullet3_active) |
+                    bullet_hit_check(bullet4_pos_x, ast_left1_pos_x, bullet4_pos_y, ast_left1_pos_y, bullet4_active);
+    assign hit_l2 = bullet_hit_check(bullet1_pos_x, ast_left2_pos_x, bullet1_pos_y, ast_left2_pos_y, bullet1_active) |
+                    bullet_hit_check(bullet2_pos_x, ast_left2_pos_x, bullet2_pos_y, ast_left2_pos_y, bullet2_active) |
+                    bullet_hit_check(bullet3_pos_x, ast_left2_pos_x, bullet3_pos_y, ast_left2_pos_y, bullet3_active) |
+                    bullet_hit_check(bullet4_pos_x, ast_left2_pos_x, bullet4_pos_y, ast_left2_pos_y, bullet4_active);
+    assign hit_l3 = bullet_hit_check(bullet1_pos_x, ast_left3_pos_x, bullet1_pos_y, ast_left3_pos_y, bullet1_active) |
+                    bullet_hit_check(bullet2_pos_x, ast_left3_pos_x, bullet2_pos_y, ast_left3_pos_y, bullet2_active) |
+                    bullet_hit_check(bullet3_pos_x, ast_left3_pos_x, bullet3_pos_y, ast_left3_pos_y, bullet3_active) |
+                    bullet_hit_check(bullet4_pos_x, ast_left3_pos_x, bullet4_pos_y, ast_left3_pos_y, bullet4_active);
+    assign hit_l4 = bullet_hit_check(bullet1_pos_x, ast_left4_pos_x, bullet1_pos_y, ast_left4_pos_y, bullet1_active) |
+                    bullet_hit_check(bullet2_pos_x, ast_left4_pos_x, bullet2_pos_y, ast_left4_pos_y, bullet2_active) |
+                    bullet_hit_check(bullet3_pos_x, ast_left4_pos_x, bullet3_pos_y, ast_left4_pos_y, bullet3_active) |
+                    bullet_hit_check(bullet4_pos_x, ast_left4_pos_x, bullet4_pos_y, ast_left4_pos_y, bullet4_active);
+    
+    // Check which bullets hit any asteroid (for deactivating the bullet)
+    assign b1_hit_any = (bullet_hit_check(bullet1_pos_x, ast_down1_pos_x, bullet1_pos_y, ast_down1_pos_y, bullet1_active) |
+                         bullet_hit_check(bullet1_pos_x, ast_down2_pos_x, bullet1_pos_y, ast_down2_pos_y, bullet1_active) |
+                         bullet_hit_check(bullet1_pos_x, ast_down3_pos_x, bullet1_pos_y, ast_down3_pos_y, bullet1_active) |
+                         bullet_hit_check(bullet1_pos_x, ast_down4_pos_x, bullet1_pos_y, ast_down4_pos_y, bullet1_active) |
+                         bullet_hit_check(bullet1_pos_x, ast_up1_pos_x, bullet1_pos_y, ast_up1_pos_y, bullet1_active) |
+                         bullet_hit_check(bullet1_pos_x, ast_up2_pos_x, bullet1_pos_y, ast_up2_pos_y, bullet1_active) |
+                         bullet_hit_check(bullet1_pos_x, ast_up3_pos_x, bullet1_pos_y, ast_up3_pos_y, bullet1_active) |
+                         bullet_hit_check(bullet1_pos_x, ast_up4_pos_x, bullet1_pos_y, ast_up4_pos_y, bullet1_active) |
+                         bullet_hit_check(bullet1_pos_x, ast_right1_pos_x, bullet1_pos_y, ast_right1_pos_y, bullet1_active) |
+                         bullet_hit_check(bullet1_pos_x, ast_right2_pos_x, bullet1_pos_y, ast_right2_pos_y, bullet1_active) |
+                         bullet_hit_check(bullet1_pos_x, ast_right3_pos_x, bullet1_pos_y, ast_right3_pos_y, bullet1_active) |
+                         bullet_hit_check(bullet1_pos_x, ast_right4_pos_x, bullet1_pos_y, ast_right4_pos_y, bullet1_active) |
+                         bullet_hit_check(bullet1_pos_x, ast_left1_pos_x, bullet1_pos_y, ast_left1_pos_y, bullet1_active) |
+                         bullet_hit_check(bullet1_pos_x, ast_left2_pos_x, bullet1_pos_y, ast_left2_pos_y, bullet1_active) |
+                         bullet_hit_check(bullet1_pos_x, ast_left3_pos_x, bullet1_pos_y, ast_left3_pos_y, bullet1_active) |
+                         bullet_hit_check(bullet1_pos_x, ast_left4_pos_x, bullet1_pos_y, ast_left4_pos_y, bullet1_active));
+    
+    assign b2_hit_any = (bullet_hit_check(bullet2_pos_x, ast_down1_pos_x, bullet2_pos_y, ast_down1_pos_y, bullet2_active) |
+                         bullet_hit_check(bullet2_pos_x, ast_down2_pos_x, bullet2_pos_y, ast_down2_pos_y, bullet2_active) |
+                         bullet_hit_check(bullet2_pos_x, ast_down3_pos_x, bullet2_pos_y, ast_down3_pos_y, bullet2_active) |
+                         bullet_hit_check(bullet2_pos_x, ast_down4_pos_x, bullet2_pos_y, ast_down4_pos_y, bullet2_active) |
+                         bullet_hit_check(bullet2_pos_x, ast_up1_pos_x, bullet2_pos_y, ast_up1_pos_y, bullet2_active) |
+                         bullet_hit_check(bullet2_pos_x, ast_up2_pos_x, bullet2_pos_y, ast_up2_pos_y, bullet2_active) |
+                         bullet_hit_check(bullet2_pos_x, ast_up3_pos_x, bullet2_pos_y, ast_up3_pos_y, bullet2_active) |
+                         bullet_hit_check(bullet2_pos_x, ast_up4_pos_x, bullet2_pos_y, ast_up4_pos_y, bullet2_active) |
+                         bullet_hit_check(bullet2_pos_x, ast_right1_pos_x, bullet2_pos_y, ast_right1_pos_y, bullet2_active) |
+                         bullet_hit_check(bullet2_pos_x, ast_right2_pos_x, bullet2_pos_y, ast_right2_pos_y, bullet2_active) |
+                         bullet_hit_check(bullet2_pos_x, ast_right3_pos_x, bullet2_pos_y, ast_right3_pos_y, bullet2_active) |
+                         bullet_hit_check(bullet2_pos_x, ast_right4_pos_x, bullet2_pos_y, ast_right4_pos_y, bullet2_active) |
+                         bullet_hit_check(bullet2_pos_x, ast_left1_pos_x, bullet2_pos_y, ast_left1_pos_y, bullet2_active) |
+                         bullet_hit_check(bullet2_pos_x, ast_left2_pos_x, bullet2_pos_y, ast_left2_pos_y, bullet2_active) |
+                         bullet_hit_check(bullet2_pos_x, ast_left3_pos_x, bullet2_pos_y, ast_left3_pos_y, bullet2_active) |
+                         bullet_hit_check(bullet2_pos_x, ast_left4_pos_x, bullet2_pos_y, ast_left4_pos_y, bullet2_active));
+    
+    assign b3_hit_any = (bullet_hit_check(bullet3_pos_x, ast_down1_pos_x, bullet3_pos_y, ast_down1_pos_y, bullet3_active) |
+                         bullet_hit_check(bullet3_pos_x, ast_down2_pos_x, bullet3_pos_y, ast_down2_pos_y, bullet3_active) |
+                         bullet_hit_check(bullet3_pos_x, ast_down3_pos_x, bullet3_pos_y, ast_down3_pos_y, bullet3_active) |
+                         bullet_hit_check(bullet3_pos_x, ast_down4_pos_x, bullet3_pos_y, ast_down4_pos_y, bullet3_active) |
+                         bullet_hit_check(bullet3_pos_x, ast_up1_pos_x, bullet3_pos_y, ast_up1_pos_y, bullet3_active) |
+                         bullet_hit_check(bullet3_pos_x, ast_up2_pos_x, bullet3_pos_y, ast_up2_pos_y, bullet3_active) |
+                         bullet_hit_check(bullet3_pos_x, ast_up3_pos_x, bullet3_pos_y, ast_up3_pos_y, bullet3_active) |
+                         bullet_hit_check(bullet3_pos_x, ast_up4_pos_x, bullet3_pos_y, ast_up4_pos_y, bullet3_active) |
+                         bullet_hit_check(bullet3_pos_x, ast_right1_pos_x, bullet3_pos_y, ast_right1_pos_y, bullet3_active) |
+                         bullet_hit_check(bullet3_pos_x, ast_right2_pos_x, bullet3_pos_y, ast_right2_pos_y, bullet3_active) |
+                         bullet_hit_check(bullet3_pos_x, ast_right3_pos_x, bullet3_pos_y, ast_right3_pos_y, bullet3_active) |
+                         bullet_hit_check(bullet3_pos_x, ast_right4_pos_x, bullet3_pos_y, ast_right4_pos_y, bullet3_active) |
+                         bullet_hit_check(bullet3_pos_x, ast_left1_pos_x, bullet3_pos_y, ast_left1_pos_y, bullet3_active) |
+                         bullet_hit_check(bullet3_pos_x, ast_left2_pos_x, bullet3_pos_y, ast_left2_pos_y, bullet3_active) |
+                         bullet_hit_check(bullet3_pos_x, ast_left3_pos_x, bullet3_pos_y, ast_left3_pos_y, bullet3_active) |
+                         bullet_hit_check(bullet3_pos_x, ast_left4_pos_x, bullet3_pos_y, ast_left4_pos_y, bullet3_active));
+    
+    assign b4_hit_any = (bullet_hit_check(bullet4_pos_x, ast_down1_pos_x, bullet4_pos_y, ast_down1_pos_y, bullet4_active) |
+                         bullet_hit_check(bullet4_pos_x, ast_down2_pos_x, bullet4_pos_y, ast_down2_pos_y, bullet4_active) |
+                         bullet_hit_check(bullet4_pos_x, ast_down3_pos_x, bullet4_pos_y, ast_down3_pos_y, bullet4_active) |
+                         bullet_hit_check(bullet4_pos_x, ast_down4_pos_x, bullet4_pos_y, ast_down4_pos_y, bullet4_active) |
+                         bullet_hit_check(bullet4_pos_x, ast_up1_pos_x, bullet4_pos_y, ast_up1_pos_y, bullet4_active) |
+                         bullet_hit_check(bullet4_pos_x, ast_up2_pos_x, bullet4_pos_y, ast_up2_pos_y, bullet4_active) |
+                         bullet_hit_check(bullet4_pos_x, ast_up3_pos_x, bullet4_pos_y, ast_up3_pos_y, bullet4_active) |
+                         bullet_hit_check(bullet4_pos_x, ast_up4_pos_x, bullet4_pos_y, ast_up4_pos_y, bullet4_active) |
+                         bullet_hit_check(bullet4_pos_x, ast_right1_pos_x, bullet4_pos_y, ast_right1_pos_y, bullet4_active) |
+                         bullet_hit_check(bullet4_pos_x, ast_right2_pos_x, bullet4_pos_y, ast_right2_pos_y, bullet4_active) |
+                         bullet_hit_check(bullet4_pos_x, ast_right3_pos_x, bullet4_pos_y, ast_right3_pos_y, bullet4_active) |
+                         bullet_hit_check(bullet4_pos_x, ast_right4_pos_x, bullet4_pos_y, ast_right4_pos_y, bullet4_active) |
+                         bullet_hit_check(bullet4_pos_x, ast_left1_pos_x, bullet4_pos_y, ast_left1_pos_y, bullet4_active) |
+                         bullet_hit_check(bullet4_pos_x, ast_left2_pos_x, bullet4_pos_y, ast_left2_pos_y, bullet4_active) |
+                         bullet_hit_check(bullet4_pos_x, ast_left3_pos_x, bullet4_pos_y, ast_left3_pos_y, bullet4_active) |
+                         bullet_hit_check(bullet4_pos_x, ast_left4_pos_x, bullet4_pos_y, ast_left4_pos_y, bullet4_active));
     
     // Game freeze logic - once frozen, stays frozen until reset
     initial begin
@@ -316,6 +494,68 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
     assign key_S = (scancode == 8'h1B);  // S = backward
     assign key_D = (scancode == 8'h23);  // D = rotate right
 
+    // Spacebar detection for firing bullets
+    wire space_pressed;
+    assign space_pressed = (Serial[8:1] == 8'h29);  // Spacebar scancode
+    
+    // Fire cooldown - 0.5 seconds at 50MHz = 25,000,000 cycles
+    reg [24:0] fire_cooldown;
+    wire can_fire;
+    assign can_fire = (fire_cooldown == 25'd0);
+    
+    // Fire signals for each bullet
+    reg fire_bullet1, fire_bullet2, fire_bullet3, fire_bullet4;
+    
+    // Find first inactive bullet and fire it
+    always @(posedge CLOCK_50)
+    begin
+        if (game_reset)
+        begin
+            fire_bullet1 <= 1'b0;
+            fire_bullet2 <= 1'b0;
+            fire_bullet3 <= 1'b0;
+            fire_bullet4 <= 1'b0;
+            fire_cooldown <= 25'd0;
+        end
+        else
+        begin
+            // Default: clear fire signals
+            fire_bullet1 <= 1'b0;
+            fire_bullet2 <= 1'b0;
+            fire_bullet3 <= 1'b0;
+            fire_bullet4 <= 1'b0;
+            
+            // Count down cooldown
+            if (fire_cooldown > 25'd0)
+                fire_cooldown <= fire_cooldown - 25'd1;
+            
+            // Fire when spacebar pressed, not frozen, can fire, and there's an inactive bullet
+            if (ps2_rec && space_pressed && !game_frozen && !clear_active && can_fire)
+            begin
+                if (!bullet1_active)
+                begin
+                    fire_bullet1 <= 1'b1;
+                    fire_cooldown <= 25'd25_000_000;  // 0.5 second cooldown
+                end
+                else if (!bullet2_active)
+                begin
+                    fire_bullet2 <= 1'b1;
+                    fire_cooldown <= 25'd25_000_000;
+                end
+                else if (!bullet3_active)
+                begin
+                    fire_bullet3 <= 1'b1;
+                    fire_cooldown <= 25'd25_000_000;
+                end
+                else if (!bullet4_active)
+                begin
+                    fire_bullet4 <= 1'b1;
+                    fire_cooldown <= 25'd25_000_000;
+                end
+            end
+        end
+    end
+
     // Valid key detection
     wire valid_key;
     assign valid_key = (Serial[8:1] == 8'h1C) || (Serial[8:1] == 8'h23) ||
@@ -381,6 +621,14 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         else if (select == 5'd15 && ast_left3_done)
             select <= 5'd16;
         else if (select == 5'd16 && ast_left4_done)
+            select <= 5'd17;  // Go to bullet 1
+        else if (select == 5'd17 && bullet1_done)
+            select <= 5'd18;  // Go to bullet 2
+        else if (select == 5'd18 && bullet2_done)
+            select <= 5'd19;  // Go to bullet 3
+        else if (select == 5'd19 && bullet3_done)
+            select <= 5'd20;  // Go to bullet 4
+        else if (select == 5'd20 && bullet4_done)
             select <= 5'd1;  // Loop back to first asteroid
     end
     
@@ -404,6 +652,10 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         gntL2 = (select == 5'd14);
         gntL3 = (select == 5'd15);
         gntL4 = (select == 5'd16);
+        gntB1 = (select == 5'd17);
+        gntB2 = (select == 5'd18);
+        gntB3 = (select == 5'd19);
+        gntB4 = (select == 5'd20);
     end
     
     // VGA output mux - screen clear has highest priority
@@ -436,6 +688,10 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
                 5'd14: begin give_x = ast_left2_x; give_y = ast_left2_y; give_colour = ast_left2_colour; give_write = ast_left2_write; end
                 5'd15: begin give_x = ast_left3_x; give_y = ast_left3_y; give_colour = ast_left3_colour; give_write = ast_left3_write; end
                 5'd16: begin give_x = ast_left4_x; give_y = ast_left4_y; give_colour = ast_left4_colour; give_write = ast_left4_write; end
+                5'd17: begin give_x = bullet1_x; give_y = bullet1_y; give_colour = bullet1_colour; give_write = bullet1_write; end
+                5'd18: begin give_x = bullet2_x; give_y = bullet2_y; give_colour = bullet2_colour; give_write = bullet2_write; end
+                5'd19: begin give_x = bullet3_x; give_y = bullet3_y; give_colour = bullet3_colour; give_write = bullet3_write; end
+                5'd20: begin give_x = bullet4_x; give_y = bullet4_y; give_colour = bullet4_colour; give_write = bullet4_write; end
                 default: begin give_x = 10'd0; give_y = 9'd0; give_colour = 9'd0; give_write = 1'b0; end
             endcase
         end
@@ -458,7 +714,93 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         .reset(game_reset),
         .frozen(game_frozen),
         .pos_x(ship_pos_x),
-        .pos_y(ship_pos_y)
+        .pos_y(ship_pos_y),
+        .dir_out(ship_direction)
+    );
+    
+    // ============ BULLET MODULES (4 bullets for rapid fire) ============
+    bullet B1 (
+        .Resetn(Resetn),
+        .Clock(CLOCK_50),
+        .gnt(gntB1),
+        .frozen(game_frozen),
+        .game_reset(game_reset),
+        .fire(fire_bullet1),
+        .ship_x(ship_pos_x),
+        .ship_y(ship_pos_y),
+        .ship_dir(ship_direction),
+        .hit(b1_hit_any),
+        .VGA_x(bullet1_x),
+        .VGA_y(bullet1_y),
+        .VGA_color(bullet1_colour),
+        .VGA_write(bullet1_write),
+        .done(bullet1_done),
+        .active(bullet1_active),
+        .pos_x(bullet1_pos_x),
+        .pos_y(bullet1_pos_y)
+    );
+    
+    bullet B2 (
+        .Resetn(Resetn),
+        .Clock(CLOCK_50),
+        .gnt(gntB2),
+        .frozen(game_frozen),
+        .game_reset(game_reset),
+        .fire(fire_bullet2),
+        .ship_x(ship_pos_x),
+        .ship_y(ship_pos_y),
+        .ship_dir(ship_direction),
+        .hit(b2_hit_any),
+        .VGA_x(bullet2_x),
+        .VGA_y(bullet2_y),
+        .VGA_color(bullet2_colour),
+        .VGA_write(bullet2_write),
+        .done(bullet2_done),
+        .active(bullet2_active),
+        .pos_x(bullet2_pos_x),
+        .pos_y(bullet2_pos_y)
+    );
+    
+    bullet B3 (
+        .Resetn(Resetn),
+        .Clock(CLOCK_50),
+        .gnt(gntB3),
+        .frozen(game_frozen),
+        .game_reset(game_reset),
+        .fire(fire_bullet3),
+        .ship_x(ship_pos_x),
+        .ship_y(ship_pos_y),
+        .ship_dir(ship_direction),
+        .hit(b3_hit_any),
+        .VGA_x(bullet3_x),
+        .VGA_y(bullet3_y),
+        .VGA_color(bullet3_colour),
+        .VGA_write(bullet3_write),
+        .done(bullet3_done),
+        .active(bullet3_active),
+        .pos_x(bullet3_pos_x),
+        .pos_y(bullet3_pos_y)
+    );
+    
+    bullet B4 (
+        .Resetn(Resetn),
+        .Clock(CLOCK_50),
+        .gnt(gntB4),
+        .frozen(game_frozen),
+        .game_reset(game_reset),
+        .fire(fire_bullet4),
+        .ship_x(ship_pos_x),
+        .ship_y(ship_pos_y),
+        .ship_dir(ship_direction),
+        .hit(b4_hit_any),
+        .VGA_x(bullet4_x),
+        .VGA_y(bullet4_y),
+        .VGA_color(bullet4_colour),
+        .VGA_write(bullet4_write),
+        .done(bullet4_done),
+        .active(bullet4_active),
+        .pos_x(bullet4_pos_x),
+        .pos_y(bullet4_pos_y)
     );
     
     // ============ ASTEROIDS FROM TOP (moving down) - 4 asteroids ============
@@ -475,7 +817,8 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         .VGA_write(ast_down1_write),
         .done(ast_down1_done),
         .pos_x(ast_down1_pos_x),
-        .pos_y(ast_down1_pos_y)
+        .pos_y(ast_down1_pos_y),
+        .force_respawn(hit_d1)
     );
     defparam AD1.XOFFSET = 60;
     defparam AD1.YOFFSET = 20;
@@ -494,7 +837,8 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         .VGA_write(ast_down2_write),
         .done(ast_down2_done),
         .pos_x(ast_down2_pos_x),
-        .pos_y(ast_down2_pos_y)
+        .pos_y(ast_down2_pos_y),
+        .force_respawn(hit_d2)
     );
     defparam AD2.XOFFSET = 200;
     defparam AD2.YOFFSET = 120;
@@ -513,7 +857,8 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         .VGA_write(ast_down3_write),
         .done(ast_down3_done),
         .pos_x(ast_down3_pos_x),
-        .pos_y(ast_down3_pos_y)
+        .pos_y(ast_down3_pos_y),
+        .force_respawn(hit_d3)
     );
     defparam AD3.XOFFSET = 400;
     defparam AD3.YOFFSET = 60;
@@ -532,7 +877,8 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         .VGA_write(ast_down4_write),
         .done(ast_down4_done),
         .pos_x(ast_down4_pos_x),
-        .pos_y(ast_down4_pos_y)
+        .pos_y(ast_down4_pos_y),
+        .force_respawn(hit_d4)
     );
     defparam AD4.XOFFSET = 550;
     defparam AD4.YOFFSET = 180;
@@ -552,7 +898,8 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         .VGA_write(ast_up1_write),
         .done(ast_up1_done),
         .pos_x(ast_up1_pos_x),
-        .pos_y(ast_up1_pos_y)
+        .pos_y(ast_up1_pos_y),
+        .force_respawn(hit_u1)
     );
     defparam AU1.XOFFSET = 100;
     defparam AU1.YOFFSET = 460;
@@ -571,7 +918,8 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         .VGA_write(ast_up2_write),
         .done(ast_up2_done),
         .pos_x(ast_up2_pos_x),
-        .pos_y(ast_up2_pos_y)
+        .pos_y(ast_up2_pos_y),
+        .force_respawn(hit_u2)
     );
     defparam AU2.XOFFSET = 280;
     defparam AU2.YOFFSET = 380;
@@ -590,7 +938,8 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         .VGA_write(ast_up3_write),
         .done(ast_up3_done),
         .pos_x(ast_up3_pos_x),
-        .pos_y(ast_up3_pos_y)
+        .pos_y(ast_up3_pos_y),
+        .force_respawn(hit_u3)
     );
     defparam AU3.XOFFSET = 460;
     defparam AU3.YOFFSET = 420;
@@ -609,7 +958,8 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         .VGA_write(ast_up4_write),
         .done(ast_up4_done),
         .pos_x(ast_up4_pos_x),
-        .pos_y(ast_up4_pos_y)
+        .pos_y(ast_up4_pos_y),
+        .force_respawn(hit_u4)
     );
     defparam AU4.XOFFSET = 580;
     defparam AU4.YOFFSET = 340;
@@ -629,7 +979,8 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         .VGA_write(ast_right1_write),
         .done(ast_right1_done),
         .pos_x(ast_right1_pos_x),
-        .pos_y(ast_right1_pos_y)
+        .pos_y(ast_right1_pos_y),
+        .force_respawn(hit_r1)
     );
     defparam AR1.XOFFSET = 20;
     defparam AR1.YOFFSET = 80;
@@ -648,7 +999,8 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         .VGA_write(ast_right2_write),
         .done(ast_right2_done),
         .pos_x(ast_right2_pos_x),
-        .pos_y(ast_right2_pos_y)
+        .pos_y(ast_right2_pos_y),
+        .force_respawn(hit_r2)
     );
     defparam AR2.XOFFSET = 100;
     defparam AR2.YOFFSET = 200;
@@ -667,7 +1019,8 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         .VGA_write(ast_right3_write),
         .done(ast_right3_done),
         .pos_x(ast_right3_pos_x),
-        .pos_y(ast_right3_pos_y)
+        .pos_y(ast_right3_pos_y),
+        .force_respawn(hit_r3)
     );
     defparam AR3.XOFFSET = 60;
     defparam AR3.YOFFSET = 320;
@@ -686,7 +1039,8 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         .VGA_write(ast_right4_write),
         .done(ast_right4_done),
         .pos_x(ast_right4_pos_x),
-        .pos_y(ast_right4_pos_y)
+        .pos_y(ast_right4_pos_y),
+        .force_respawn(hit_r4)
     );
     defparam AR4.XOFFSET = 140;
     defparam AR4.YOFFSET = 420;
@@ -706,7 +1060,8 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         .VGA_write(ast_left1_write),
         .done(ast_left1_done),
         .pos_x(ast_left1_pos_x),
-        .pos_y(ast_left1_pos_y)
+        .pos_y(ast_left1_pos_y),
+        .force_respawn(hit_l1)
     );
     defparam AL1.XOFFSET = 620;
     defparam AL1.YOFFSET = 60;
@@ -725,7 +1080,8 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         .VGA_write(ast_left2_write),
         .done(ast_left2_done),
         .pos_x(ast_left2_pos_x),
-        .pos_y(ast_left2_pos_y)
+        .pos_y(ast_left2_pos_y),
+        .force_respawn(hit_l2)
     );
     defparam AL2.XOFFSET = 540;
     defparam AL2.YOFFSET = 160;
@@ -744,7 +1100,8 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         .VGA_write(ast_left3_write),
         .done(ast_left3_done),
         .pos_x(ast_left3_pos_x),
-        .pos_y(ast_left3_pos_y)
+        .pos_y(ast_left3_pos_y),
+        .force_respawn(hit_l3)
     );
     defparam AL3.XOFFSET = 580;
     defparam AL3.YOFFSET = 280;
@@ -763,7 +1120,8 @@ module vga_demo (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         .VGA_write(ast_left4_write),
         .done(ast_left4_done),
         .pos_x(ast_left4_pos_x),
-        .pos_y(ast_left4_pos_y)
+        .pos_y(ast_left4_pos_y),
+        .force_respawn(hit_l4)
     );
     defparam AL4.XOFFSET = 500;
     defparam AL4.YOFFSET = 400;
@@ -797,7 +1155,7 @@ endmodule
 // ============================================================
 
 // Asteroid moving DOWN (starts at top, respawns at random X when reaching bottom)
-module asteroid_down (Resetn, Clock, gnt, frozen, game_reset, VGA_x, VGA_y, VGA_color, VGA_write, done, pos_x, pos_y);
+module asteroid_down (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA_x, VGA_y, VGA_color, VGA_write, done, pos_x, pos_y);
     parameter nX = 10;
     parameter nY = 9;
     parameter XOFFSET = 100;
@@ -814,7 +1172,7 @@ module asteroid_down (Resetn, Clock, gnt, frozen, game_reset, VGA_x, VGA_y, VGA_
     parameter Y_MAX = 9'd472;
     parameter LFSR_SEED = 16'hACE1;
     
-    input wire Resetn, Clock, gnt, frozen, game_reset;
+    input wire Resetn, Clock, gnt, frozen, game_reset, force_respawn;
     output wire [nX-1:0] VGA_x;
     output wire [nY-1:0] VGA_y;
     output wire [8:0] VGA_color;
@@ -944,7 +1302,7 @@ module asteroid_down (Resetn, Clock, gnt, frozen, game_reset, VGA_x, VGA_y, VGA_
         begin
             if (y_Q == E && gnt && needs_respawn)
                 needs_respawn <= 1'b0;
-            else if (Y >= Y_MAX)
+            else if (Y >= Y_MAX || force_respawn)
                 needs_respawn <= 1'b1;
         end
     end
@@ -1018,7 +1376,7 @@ module asteroid_down (Resetn, Clock, gnt, frozen, game_reset, VGA_x, VGA_y, VGA_
 endmodule
 
 // Asteroid moving UP (starts at bottom, respawns at random X when reaching top)
-module asteroid_up (Resetn, Clock, gnt, frozen, game_reset, VGA_x, VGA_y, VGA_color, VGA_write, done, pos_x, pos_y);
+module asteroid_up (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA_x, VGA_y, VGA_color, VGA_write, done, pos_x, pos_y);
     parameter nX = 10;
     parameter nY = 9;
     parameter XOFFSET = 100;
@@ -1035,7 +1393,7 @@ module asteroid_up (Resetn, Clock, gnt, frozen, game_reset, VGA_x, VGA_y, VGA_co
     parameter Y_MAX = 9'd472;
     parameter LFSR_SEED = 16'hBEEF;
     
-    input wire Resetn, Clock, gnt, frozen, game_reset;
+    input wire Resetn, Clock, gnt, frozen, game_reset, force_respawn;
     output wire [nX-1:0] VGA_x;
     output wire [nY-1:0] VGA_y;
     output wire [8:0] VGA_color;
@@ -1165,7 +1523,7 @@ module asteroid_up (Resetn, Clock, gnt, frozen, game_reset, VGA_x, VGA_y, VGA_co
         begin
             if (y_Q == E && gnt && needs_respawn)
                 needs_respawn <= 1'b0;
-            else if (Y <= Y_MIN)
+            else if (Y <= Y_MIN || force_respawn)
                 needs_respawn <= 1'b1;
         end
     end
@@ -1239,7 +1597,7 @@ module asteroid_up (Resetn, Clock, gnt, frozen, game_reset, VGA_x, VGA_y, VGA_co
 endmodule
 
 // Asteroid moving RIGHT (starts at left, respawns at random Y when reaching right)
-module asteroid_right (Resetn, Clock, gnt, frozen, game_reset, VGA_x, VGA_y, VGA_color, VGA_write, done, pos_x, pos_y);
+module asteroid_right (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA_x, VGA_y, VGA_color, VGA_write, done, pos_x, pos_y);
     parameter nX = 10;
     parameter nY = 9;
     parameter XOFFSET = 20;
@@ -1256,7 +1614,7 @@ module asteroid_right (Resetn, Clock, gnt, frozen, game_reset, VGA_x, VGA_y, VGA
     parameter X_MAX = 10'd632;
     parameter LFSR_SEED = 16'hCAFE;
     
-    input wire Resetn, Clock, gnt, frozen, game_reset;
+    input wire Resetn, Clock, gnt, frozen, game_reset, force_respawn;
     output wire [nX-1:0] VGA_x;
     output wire [nY-1:0] VGA_y;
     output wire [8:0] VGA_color;
@@ -1386,7 +1744,7 @@ module asteroid_right (Resetn, Clock, gnt, frozen, game_reset, VGA_x, VGA_y, VGA
         begin
             if (y_Q == E && gnt && needs_respawn)
                 needs_respawn <= 1'b0;
-            else if (X >= X_MAX)
+            else if (X >= X_MAX || force_respawn)
                 needs_respawn <= 1'b1;
         end
     end
@@ -1460,7 +1818,7 @@ module asteroid_right (Resetn, Clock, gnt, frozen, game_reset, VGA_x, VGA_y, VGA
 endmodule
 
 // Asteroid moving LEFT (starts at right, respawns at random Y when reaching left)
-module asteroid_left (Resetn, Clock, gnt, frozen, game_reset, VGA_x, VGA_y, VGA_color, VGA_write, done, pos_x, pos_y);
+module asteroid_left (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA_x, VGA_y, VGA_color, VGA_write, done, pos_x, pos_y);
     parameter nX = 10;
     parameter nY = 9;
     parameter XOFFSET = 620;
@@ -1477,7 +1835,7 @@ module asteroid_left (Resetn, Clock, gnt, frozen, game_reset, VGA_x, VGA_y, VGA_
     parameter X_MAX = 10'd632;
     parameter LFSR_SEED = 16'hDEAD;
     
-    input wire Resetn, Clock, gnt, frozen, game_reset;
+    input wire Resetn, Clock, gnt, frozen, game_reset, force_respawn;
     output wire [nX-1:0] VGA_x;
     output wire [nY-1:0] VGA_y;
     output wire [8:0] VGA_color;
@@ -1607,7 +1965,7 @@ module asteroid_left (Resetn, Clock, gnt, frozen, game_reset, VGA_x, VGA_y, VGA_
         begin
             if (y_Q == E && gnt && needs_respawn)
                 needs_respawn <= 1'b0;
-            else if (X <= X_MIN)
+            else if (X <= X_MIN || force_respawn)
                 needs_respawn <= 1'b1;
         end
     end
@@ -1819,7 +2177,7 @@ endmodule
 
 // Ship module with rotation - controlled by WASD
 module ship (Resetn, Clock, ps2_rec, key_W, key_A, key_S, key_D, 
-             VGA_x, VGA_y, VGA_color, VGA_write, done, reset, frozen, pos_x, pos_y);
+             VGA_x, VGA_y, VGA_color, VGA_write, done, reset, frozen, pos_x, pos_y, dir_out);
     parameter nX = 10;
     parameter nY = 9;
     parameter XOFFSET = 320;
@@ -1848,6 +2206,7 @@ module ship (Resetn, Clock, ps2_rec, key_W, key_A, key_S, key_D,
     output reg done;
     output wire [nX-1:0] pos_x;
     output wire [nY-1:0] pos_y;
+    output wire [1:0] dir_out;
 
     wire [nX-1:0] X, X0;
     wire [nY-1:0] Y, Y0;
@@ -1875,6 +2234,7 @@ module ship (Resetn, Clock, ps2_rec, key_W, key_A, key_S, key_D,
     // Output position for collision detection
     assign pos_x = X;
     assign pos_y = Y;
+    assign dir_out = direction;
     
     always @(posedge Clock)
     begin
@@ -2114,4 +2474,325 @@ module screen_clear (Clock, start, x, y, write, active, done);
             default: state <= IDLE;
         endcase
     end
+endmodule
+
+// ============================================================
+// BULLET MODULE - 2x2 white pixel, fired from ship
+// ============================================================
+module bullet (Resetn, Clock, gnt, frozen, game_reset, fire, ship_x, ship_y, ship_dir, hit,
+               VGA_x, VGA_y, VGA_color, VGA_write, done, active, pos_x, pos_y);
+    parameter nX = 10;
+    parameter nY = 9;
+    parameter bullet_x = 1;  // 2x2 bullet
+    parameter bullet_y = 1;
+    parameter BOX_SIZE_X = 1 << bullet_x;  // 2
+    parameter BOX_SIZE_Y = 1 << bullet_y;  // 2
+    parameter INIT_FILE = "./MIF/bullet_2_2_9.mif";
+    parameter DELAY = 20'd12500;  // Fast bullet speed
+    
+    parameter IDLE = 4'd0, WAIT_TICK = 4'd1, ERASE1 = 4'd2, ERASE2 = 4'd3,
+              MOVE = 4'd4, DRAW1 = 4'd5, DRAW2 = 4'd6, DONE_ST = 4'd7,
+              DEACTIVATE_ERASE1 = 4'd8, DEACTIVATE_ERASE2 = 4'd9, DEACTIVATE_DONE = 4'd10;
+    
+    parameter DIR_UP = 2'b00, DIR_RIGHT = 2'b01, DIR_DOWN = 2'b10, DIR_LEFT = 2'b11;
+    
+    input wire Resetn, Clock, gnt, frozen, game_reset, fire, hit;
+    input wire [nX-1:0] ship_x;
+    input wire [nY-1:0] ship_y;
+    input wire [1:0] ship_dir;
+    output wire [nX-1:0] VGA_x;
+    output wire [nY-1:0] VGA_y;
+    output wire [8:0] VGA_color;
+    output wire VGA_write;
+    output reg done;
+    output reg active;
+    output wire [nX-1:0] pos_x;
+    output wire [nY-1:0] pos_y;
+    
+    reg [nX-1:0] X;
+    reg [nY-1:0] Y;
+    reg [1:0] direction;
+    wire [nX-1:0] size_x = BOX_SIZE_X;
+    wire [nY-1:0] size_y = BOX_SIZE_Y;
+    reg [bullet_x-1:0] XC;
+    reg [bullet_y-1:0] YC;
+    reg write;
+    reg erase;
+    reg [3:0] state;
+    wire [8:0] obj_color;
+    reg [19:0] slow_count;
+    reg tick;
+    
+    // Output position for collision detection
+    assign pos_x = X;
+    assign pos_y = Y;
+    
+    // Check if bullet is out of bounds
+    wire out_of_bounds;
+    assign out_of_bounds = (X < 10'd8) || (X > 10'd632) || (Y < 9'd8) || (Y > 9'd472);
+    
+    // Need to deactivate when hit or out of bounds
+    wire need_deactivate;
+    assign need_deactivate = hit || out_of_bounds;
+    
+    // Initialize
+    initial begin
+        X = 10'd320;
+        Y = 9'd240;
+        direction = DIR_UP;
+        slow_count = 20'd0;
+        tick = 1'b0;
+        active = 1'b0;
+        state = IDLE;
+        XC = 0;
+        YC = 0;
+        write = 0;
+        erase = 0;
+        done = 0;
+    end
+    
+    // Speed tick generator
+    always @(posedge Clock)
+    begin
+        if (game_reset || !active)
+        begin
+            slow_count <= 20'd0;
+            tick <= 1'b0;
+        end
+        else if (!frozen)
+        begin
+            if (slow_count >= DELAY)
+            begin
+                slow_count <= 20'd0;
+                tick <= 1'b1;
+            end
+            else
+            begin
+                slow_count <= slow_count + 20'd1;
+                tick <= 1'b0;
+            end
+        end
+        else
+            tick <= 1'b0;
+    end
+    
+    // Main state machine
+    always @(posedge Clock)
+    begin
+        if (game_reset)
+        begin
+            active <= 1'b0;
+            X <= 10'd320;
+            Y <= 9'd240;
+            direction <= DIR_UP;
+            state <= IDLE;
+            XC <= 0;
+            YC <= 0;
+            write <= 1'b0;
+            erase <= 1'b0;
+            done <= 1'b0;
+        end
+        else
+        begin
+            case (state)
+                IDLE: begin
+                    done <= 1'b0;
+                    write <= 1'b0;
+                    erase <= 1'b0;
+                    if (fire && !active && !frozen)
+                    begin
+                        // Spawn bullet at front edge of ship
+                        active <= 1'b1;
+                        direction <= ship_dir;
+                        case (ship_dir)
+                            DIR_UP:    begin X <= ship_x; Y <= ship_y - 9'd9; end
+                            DIR_RIGHT: begin X <= ship_x + 10'd9; Y <= ship_y; end
+                            DIR_DOWN:  begin X <= ship_x; Y <= ship_y + 9'd9; end
+                            DIR_LEFT:  begin X <= ship_x - 10'd9; Y <= ship_y; end
+                        endcase
+                        state <= WAIT_TICK;
+                    end
+                    else if (gnt)
+                    begin
+                        // Not active, immediately signal done
+                        done <= 1'b1;
+                        state <= DONE_ST;
+                    end
+                end
+                
+                WAIT_TICK: begin
+                    done <= 1'b0;
+                    write <= 1'b0;
+                    if (gnt && tick)
+                    begin
+                        // Check if we need to deactivate
+                        if (need_deactivate)
+                        begin
+                            XC <= 0;
+                            YC <= 0;
+                            state <= DEACTIVATE_ERASE1;
+                        end
+                        else
+                        begin
+                            XC <= 0;
+                            YC <= 0;
+                            state <= ERASE1;
+                        end
+                    end
+                end
+                
+                // Normal erase cycle
+                ERASE1: begin
+                    if (gnt)
+                    begin
+                        write <= 1'b1;
+                        erase <= 1'b1;
+                        if (XC == size_x - 1)
+                        begin
+                            XC <= 0;
+                            state <= ERASE2;
+                        end
+                        else
+                            XC <= XC + 1'b1;
+                    end
+                end
+                
+                ERASE2: begin
+                    if (gnt)
+                    begin
+                        write <= 1'b1;
+                        erase <= 1'b1;
+                        if (YC == size_y - 1)
+                        begin
+                            YC <= 0;
+                            state <= MOVE;
+                        end
+                        else
+                        begin
+                            YC <= YC + 1'b1;
+                            state <= ERASE1;
+                        end
+                    end
+                end
+                
+                MOVE: begin
+                    write <= 1'b0;
+                    erase <= 1'b0;
+                    // Move bullet
+                    case (direction)
+                        DIR_UP:    Y <= Y - 9'd2;
+                        DIR_DOWN:  Y <= Y + 9'd2;
+                        DIR_LEFT:  X <= X - 10'd2;
+                        DIR_RIGHT: X <= X + 10'd2;
+                    endcase
+                    XC <= 0;
+                    YC <= 0;
+                    state <= DRAW1;
+                end
+                
+                // Draw cycle
+                DRAW1: begin
+                    if (gnt)
+                    begin
+                        write <= 1'b1;
+                        erase <= 1'b0;
+                        if (XC == size_x - 1)
+                        begin
+                            XC <= 0;
+                            state <= DRAW2;
+                        end
+                        else
+                            XC <= XC + 1'b1;
+                    end
+                end
+                
+                DRAW2: begin
+                    if (gnt)
+                    begin
+                        write <= 1'b1;
+                        erase <= 1'b0;
+                        if (YC == size_y - 1)
+                        begin
+                            YC <= 0;
+                            write <= 1'b0;
+                            done <= 1'b1;
+                            state <= DONE_ST;
+                        end
+                        else
+                        begin
+                            YC <= YC + 1'b1;
+                            state <= DRAW1;
+                        end
+                    end
+                end
+                
+                DONE_ST: begin
+                    done <= 1'b0;
+                    write <= 1'b0;
+                    if (active)
+                        state <= WAIT_TICK;
+                    else
+                        state <= IDLE;
+                end
+                
+                // Deactivation erase cycle - erase then deactivate
+                DEACTIVATE_ERASE1: begin
+                    if (gnt)
+                    begin
+                        write <= 1'b1;
+                        erase <= 1'b1;
+                        if (XC == size_x - 1)
+                        begin
+                            XC <= 0;
+                            state <= DEACTIVATE_ERASE2;
+                        end
+                        else
+                            XC <= XC + 1'b1;
+                    end
+                end
+                
+                DEACTIVATE_ERASE2: begin
+                    if (gnt)
+                    begin
+                        write <= 1'b1;
+                        erase <= 1'b1;
+                        if (YC == size_y - 1)
+                        begin
+                            YC <= 0;
+                            write <= 1'b0;
+                            active <= 1'b0;
+                            done <= 1'b1;
+                            state <= DEACTIVATE_DONE;
+                        end
+                        else
+                        begin
+                            YC <= YC + 1'b1;
+                            state <= DEACTIVATE_ERASE1;
+                        end
+                    end
+                end
+                
+                DEACTIVATE_DONE: begin
+                    done <= 1'b0;
+                    write <= 1'b0;
+                    erase <= 1'b0;
+                    state <= IDLE;
+                end
+                
+                default: state <= IDLE;
+            endcase
+        end
+    end
+    
+    // Bullet sprite memory
+    object_mem U6 ({YC,XC}, Clock, obj_color);
+        defparam U6.n = 9;
+        defparam U6.Mn = bullet_x + bullet_y;
+        defparam U6.INIT_FILE = INIT_FILE;
+    
+    // VGA output
+    assign VGA_x = X - (size_x >> 1) + XC;
+    assign VGA_y = Y - (size_y >> 1) + YC;
+    assign VGA_write = write;
+    assign VGA_color = erase ? 9'b000000000 : obj_color;
 endmodule
