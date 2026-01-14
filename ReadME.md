@@ -1,4 +1,6 @@
-## Asteroids
+# Asteroids
+
+## Overview
 
 Navigate your spaceship through waves of asteroids coming from all four directions while defending yourself with rapid-fire bullets. The game tests your reflexes and navigation skills as you try to survive as long as possible. Your survival time is displayed on the board's HEX displays, tracking every second you stay alive.
 
