@@ -13,17 +13,15 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
     output wire [7:0] VGA_R, VGA_G, VGA_B;
     output wire VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK;
     
-    // Ship signals
     wire [nX-1:0] ship_x;
     wire [nY-1:0] ship_y;
     wire [8:0] ship_colour;
     wire ship_write;
     wire ship_done;
-    wire [nX-1:0] ship_pos_x;  // Ship center position for collision
+    wire [nX-1:0] ship_pos_x;  
     wire [nY-1:0] ship_pos_y;
-    wire [1:0] ship_direction;  // Ship facing direction for bullet
+    wire [1:0] ship_direction; 
     
-    // Bullet signals - 4 bullets for rapid fire
     wire [nX-1:0] bullet1_x, bullet2_x, bullet3_x, bullet4_x;
     wire [nY-1:0] bullet1_y, bullet2_y, bullet3_y, bullet4_y;
     wire [8:0] bullet1_colour, bullet2_colour, bullet3_colour, bullet4_colour;
@@ -33,7 +31,6 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
     wire [nX-1:0] bullet1_pos_x, bullet2_pos_x, bullet3_pos_x, bullet4_pos_x;
     wire [nY-1:0] bullet1_pos_y, bullet2_pos_y, bullet3_pos_y, bullet4_pos_y;
     
-    // Asteroid signals - from top (moving down)
     wire [nX-1:0] ast_down1_x, ast_down2_x, ast_down3_x, ast_down4_x;
     wire [nY-1:0] ast_down1_y, ast_down2_y, ast_down3_y, ast_down4_y;
     wire [8:0] ast_down1_colour, ast_down2_colour, ast_down3_colour, ast_down4_colour;
@@ -42,7 +39,6 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
     wire [nX-1:0] ast_down1_pos_x, ast_down2_pos_x, ast_down3_pos_x, ast_down4_pos_x;
     wire [nY-1:0] ast_down1_pos_y, ast_down2_pos_y, ast_down3_pos_y, ast_down4_pos_y;
     
-    // Asteroid signals - from bottom (moving up)
     wire [nX-1:0] ast_up1_x, ast_up2_x, ast_up3_x, ast_up4_x;
     wire [nY-1:0] ast_up1_y, ast_up2_y, ast_up3_y, ast_up4_y;
     wire [8:0] ast_up1_colour, ast_up2_colour, ast_up3_colour, ast_up4_colour;
@@ -51,7 +47,6 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
     wire [nX-1:0] ast_up1_pos_x, ast_up2_pos_x, ast_up3_pos_x, ast_up4_pos_x;
     wire [nY-1:0] ast_up1_pos_y, ast_up2_pos_y, ast_up3_pos_y, ast_up4_pos_y;
     
-    // Asteroid signals - from left (moving right)
     wire [nX-1:0] ast_right1_x, ast_right2_x, ast_right3_x, ast_right4_x;
     wire [nY-1:0] ast_right1_y, ast_right2_y, ast_right3_y, ast_right4_y;
     wire [8:0] ast_right1_colour, ast_right2_colour, ast_right3_colour, ast_right4_colour;
@@ -60,7 +55,6 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
     wire [nX-1:0] ast_right1_pos_x, ast_right2_pos_x, ast_right3_pos_x, ast_right4_pos_x;
     wire [nY-1:0] ast_right1_pos_y, ast_right2_pos_y, ast_right3_pos_y, ast_right4_pos_y;
     
-    // Asteroid signals - from right (moving left)
     wire [nX-1:0] ast_left1_x, ast_left2_x, ast_left3_x, ast_left4_x;
     wire [nY-1:0] ast_left1_y, ast_left2_y, ast_left3_y, ast_left4_y;
     wire [8:0] ast_left1_colour, ast_left2_colour, ast_left3_colour, ast_left4_colour;
@@ -69,18 +63,15 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
     wire [nX-1:0] ast_left1_pos_x, ast_left2_pos_x, ast_left3_pos_x, ast_left4_pos_x;
     wire [nY-1:0] ast_left1_pos_y, ast_left2_pos_y, ast_left3_pos_y, ast_left4_pos_y;
     
-    // VGA mux signals
     reg [nX-1:0] give_x;
     reg [nY-1:0] give_y;
     reg [8:0] give_colour;
     reg give_write;
     
-    // Grant signals for round-robin
     reg gntShip, gntD1, gntD2, gntD3, gntD4, gntU1, gntU2, gntU3, gntU4, gntR1, gntR2, gntR3, gntR4, gntL1, gntL2, gntL3, gntL4;
     reg gntB1, gntB2, gntB3, gntB4;
     reg [4:0] select;
     
-    // PS2 keyboard signals
     reg prev_ps2_clk;
     wire negedge_ps2_clk;
     wire ps2_rec;
@@ -91,19 +82,14 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
     reg Esc;
     reg shipReq;
     
-    // Key press signals
     wire key_W, key_A, key_S, key_D;
     
-    wire Resetn = 1'b1;  // Always high
+    wire Resetn = 1'b1;  
     wire KEY0_sync;
     
-    // ============ GAME RESET ============
-    // KEY[0] triggers a full game restart
     wire game_reset;
     assign game_reset = KEY0_sync;
     
-    // ============ SCREEN CLEAR ============
-    // Clears entire screen to black when game resets
     wire [nX-1:0] clear_x;
     wire [nY-1:0] clear_y;
     wire clear_write;
@@ -120,19 +106,14 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         .done(clear_done)
     );
     
-    // ============ COLLISION DETECTION ============
     reg game_frozen;
     wire collision;
     
-    // Collision detection - check if ship overlaps any asteroid (16x16 bounding boxes)
-    // Objects collide if distance between centers < 16 on both axes
     wire coll_d1, coll_d2, coll_d3, coll_d4;
     wire coll_u1, coll_u2, coll_u3, coll_u4;
     wire coll_r1, coll_r2, coll_r3, coll_r4;
     wire coll_l1, coll_l2, coll_l3, coll_l4;
     
-    // Helper function for absolute difference check
-    // Two 16x16 objects collide if |x1-x2| < 16 AND |y1-y2| < 16
     function collision_check;
         input [9:0] ship_x, ast_x;
         input [8:0] ship_y, ast_y;
@@ -167,17 +148,13 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
                        coll_r1 | coll_r2 | coll_r3 | coll_r4 |
                        coll_l1 | coll_l2 | coll_l3 | coll_l4;
     
-    // ============ BULLET-ASTEROID COLLISION DETECTION ============
-    // Check all 4 bullets against all 16 asteroids
     wire hit_d1, hit_d2, hit_d3, hit_d4;
     wire hit_u1, hit_u2, hit_u3, hit_u4;
     wire hit_r1, hit_r2, hit_r3, hit_r4;
     wire hit_l1, hit_l2, hit_l3, hit_l4;
     
-    // Which bullets hit which asteroids (for deactivating bullets)
     wire b1_hit_any, b2_hit_any, b3_hit_any, b4_hit_any;
     
-    // Bullet hits asteroid if distance < 9 pixels (bullet is 2x2, asteroid is 16x16)
     function bullet_hit_check;
         input [9:0] bx, ax;
         input [8:0] by, ay;
@@ -195,7 +172,6 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         end
     endfunction
     
-    // Check each asteroid against all 4 bullets - asteroid respawns if ANY bullet hits it
     assign hit_d1 = bullet_hit_check(bullet1_pos_x, ast_down1_pos_x, bullet1_pos_y, ast_down1_pos_y, bullet1_active) |
                     bullet_hit_check(bullet2_pos_x, ast_down1_pos_x, bullet2_pos_y, ast_down1_pos_y, bullet2_active) |
                     bullet_hit_check(bullet3_pos_x, ast_down1_pos_x, bullet3_pos_y, ast_down1_pos_y, bullet3_active) |
@@ -264,7 +240,6 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
                     bullet_hit_check(bullet3_pos_x, ast_left4_pos_x, bullet3_pos_y, ast_left4_pos_y, bullet3_active) |
                     bullet_hit_check(bullet4_pos_x, ast_left4_pos_x, bullet4_pos_y, ast_left4_pos_y, bullet4_active);
     
-    // Check which bullets hit any asteroid (for deactivating the bullet)
     assign b1_hit_any = (bullet_hit_check(bullet1_pos_x, ast_down1_pos_x, bullet1_pos_y, ast_down1_pos_y, bullet1_active) |
                          bullet_hit_check(bullet1_pos_x, ast_down2_pos_x, bullet1_pos_y, ast_down2_pos_y, bullet1_active) |
                          bullet_hit_check(bullet1_pos_x, ast_down3_pos_x, bullet1_pos_y, ast_down3_pos_y, bullet1_active) |
@@ -333,7 +308,6 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
                          bullet_hit_check(bullet4_pos_x, ast_left3_pos_x, bullet4_pos_y, ast_left3_pos_y, bullet4_active) |
                          bullet_hit_check(bullet4_pos_x, ast_left4_pos_x, bullet4_pos_y, ast_left4_pos_y, bullet4_active));
     
-    // Game freeze logic - once frozen, stays frozen until reset
     initial begin
         game_frozen = 1'b0;
     end
@@ -346,18 +320,13 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
             game_frozen <= 1'b1;
     end
 
-    // Synchronizers for inputs
     sync s0 (~KEY[0], 1'b1, CLOCK_50, KEY0_sync);
     sync s3 (PS2_CLK, 1'b1, CLOCK_50, PS2_CLK_S);
     sync s4 (PS2_DAT, 1'b1, CLOCK_50, PS2_DAT_S);
 
-    // ============ STOPWATCH TIMER ON HEX DISPLAYS ============
-    // Counts from 000000 to 999999, incrementing every second
-    // Stops when game is frozen
-    reg [25:0] second_counter;  // Counts to 50,000,000 for 1 second at 50MHz
-    reg [3:0] digit0, digit1, digit2, digit3, digit4, digit5;  // BCD digits
+    reg [25:0] second_counter; 
+    reg [3:0] digit0, digit1, digit2, digit3, digit4, digit5;  
     
-    // Initialize stopwatch
     initial begin
         second_counter = 26'd0;
         digit0 = 4'd0;
@@ -368,7 +337,6 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         digit5 = 4'd0;
     end
     
-    // 1-second counter and BCD digit incrementing (stops when frozen or clearing, resets on game_reset)
     always @(posedge CLOCK_50)
     begin
         if (game_reset)
@@ -386,7 +354,6 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
             if (second_counter >= 26'd49_999_999)
             begin
                 second_counter <= 26'd0;
-                // Increment BCD counter
                 if (digit0 == 4'd9)
                 begin
                     digit0 <= 4'd0;
@@ -403,7 +370,7 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
                                 begin
                                     digit4 <= 4'd0;
                                     if (digit5 == 4'd9)
-                                        digit5 <= 4'd0;  // Wrap around at 999999
+                                        digit5 <= 4'd0;  
                                     else
                                         digit5 <= digit5 + 4'd1;
                                 end
@@ -427,8 +394,6 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         end
     end
     
-    // 7-segment decoder (active low)
-    // Segments: 0=top, 1=top-right, 2=bottom-right, 3=bottom, 4=bottom-left, 5=top-left, 6=middle
     function [6:0] seg7;
         input [3:0] digit;
         case (digit)
@@ -446,7 +411,6 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         endcase
     endfunction
     
-    // Connect digits to HEX displays
     assign HEX0 = seg7(digit0);
     assign HEX1 = seg7(digit1);
     assign HEX2 = seg7(digit2);
@@ -454,13 +418,11 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
     assign HEX4 = seg7(digit4);
     assign HEX5 = seg7(digit5);
 
-    // PS2 clock edge detection
     always @(posedge CLOCK_50)
         prev_ps2_clk <= PS2_CLK_S;
      
     assign negedge_ps2_clk = (prev_ps2_clk & !PS2_CLK_S);
 
-    // PS2 serial data shift register
     always @(posedge CLOCK_50)
     begin
         if (Resetn == 0)
@@ -472,7 +434,6 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         end
     end
      
-    // PS2 packet counter
     always @(posedge CLOCK_50)
     begin
         if (!Resetn || Packet == 'd11)
@@ -485,28 +446,22 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
      
     assign ps2_rec = (Packet == 'd11) && (Serial[30:23] == Serial[8:1]);
 
-    // Store scancode
     regn u1 (Serial[8:1], Resetn, Esc, CLOCK_50, scancode);
 
-    // Decode which key was pressed
-    assign key_W = (scancode == 8'h1D);  // W = forward
-    assign key_A = (scancode == 8'h1C);  // A = rotate left
-    assign key_S = (scancode == 8'h1B);  // S = backward
-    assign key_D = (scancode == 8'h23);  // D = rotate right
+    assign key_W = (scancode == 8'h1D);  
+    assign key_A = (scancode == 8'h1C);  
+    assign key_S = (scancode == 8'h1B);  
+    assign key_D = (scancode == 8'h23);  
 
-    // Spacebar detection for firing bullets
     wire space_pressed;
-    assign space_pressed = (Serial[8:1] == 8'h29);  // Spacebar scancode
+    assign space_pressed = (Serial[8:1] == 8'h29);  
     
-    // Fire cooldown - 0.5 seconds at 50MHz = 25,000,000 cycles
     reg [24:0] fire_cooldown;
     wire can_fire;
     assign can_fire = (fire_cooldown == 25'd0);
     
-    // Fire signals for each bullet
     reg fire_bullet1, fire_bullet2, fire_bullet3, fire_bullet4;
     
-    // Find first inactive bullet and fire it
     always @(posedge CLOCK_50)
     begin
         if (game_reset)
@@ -519,23 +474,20 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         end
         else
         begin
-            // Default: clear fire signals
             fire_bullet1 <= 1'b0;
             fire_bullet2 <= 1'b0;
             fire_bullet3 <= 1'b0;
             fire_bullet4 <= 1'b0;
             
-            // Count down cooldown
             if (fire_cooldown > 25'd0)
                 fire_cooldown <= fire_cooldown - 25'd1;
             
-            // Fire when spacebar pressed, not frozen, can fire, and there's an inactive bullet
             if (ps2_rec && space_pressed && !game_frozen && !clear_active && can_fire)
             begin
                 if (!bullet1_active)
                 begin
                     fire_bullet1 <= 1'b1;
-                    fire_cooldown <= 25'd25_000_000;  // 0.5 second cooldown
+                    fire_cooldown <= 25'd25_000_000; 
                 end
                 else if (!bullet2_active)
                 begin
@@ -556,12 +508,10 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         end
     end
 
-    // Valid key detection
     wire valid_key;
     assign valid_key = (Serial[8:1] == 8'h1C) || (Serial[8:1] == 8'h23) ||
                        (Serial[8:1] == 8'h1D) || (Serial[8:1] == 8'h1B);
 
-    // Ship request logic - request update when valid key pressed (only if not frozen)
     always @(posedge CLOCK_50)
     begin
         if (~Resetn)
@@ -575,19 +525,17 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         end
     end
 
-    // Enable scancode capture
     always @(*)
     begin
         Esc = 1'b1;
     end
     
-    // Round-robin select state machine
     always @(posedge CLOCK_50)
     begin
         if (!Resetn)
             select <= 5'd0;
         else if (shipReq)
-            select <= 5'd0;  // Ship has priority
+            select <= 5'd0;  
         else if (select == 5'd0 && (ship_done || !shipReq))
             select <= 5'd1;
         else if (select == 5'd1 && ast_down1_done)
@@ -621,18 +569,17 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         else if (select == 5'd15 && ast_left3_done)
             select <= 5'd16;
         else if (select == 5'd16 && ast_left4_done)
-            select <= 5'd17;  // Go to bullet 1
+            select <= 5'd17;  
         else if (select == 5'd17 && bullet1_done)
-            select <= 5'd18;  // Go to bullet 2
+            select <= 5'd18;  
         else if (select == 5'd18 && bullet2_done)
-            select <= 5'd19;  // Go to bullet 3
+            select <= 5'd19;  
         else if (select == 5'd19 && bullet3_done)
-            select <= 5'd20;  // Go to bullet 4
+            select <= 5'd20;  
         else if (select == 5'd20 && bullet4_done)
-            select <= 5'd1;  // Loop back to first asteroid
+            select <= 5'd1;  
     end
     
-    // Grant signals based on select
     always @(*)
     begin
         gntShip = (select == 5'd0);
@@ -658,14 +605,13 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         gntB4 = (select == 5'd20);
     end
     
-    // VGA output mux - screen clear has highest priority
     always @(*)
     begin
         if (clear_active)
         begin
             give_x = clear_x;
             give_y = clear_y;
-            give_colour = 9'b000000000;  // Black
+            give_colour = 9'b000000000;  
             give_write = clear_write;
         end
         else
@@ -697,7 +643,6 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         end
     end
 
-    // Ship module instance with rotation support
     ship O1 (
         .Resetn(Resetn),
         .Clock(CLOCK_50),
@@ -718,7 +663,6 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         .dir_out(ship_direction)
     );
     
-    // ============ BULLET MODULES (4 bullets for rapid fire) ============
     bullet B1 (
         .Resetn(Resetn),
         .Clock(CLOCK_50),
@@ -803,8 +747,6 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
         .pos_y(bullet4_pos_y)
     );
     
-    // ============ ASTEROIDS FROM TOP (moving down) - 4 asteroids ============
-    // DELAY values: 1.25x slower than previous (28125*1.25, etc.)
     asteroid_down AD1 (
         .Resetn(Resetn),
         .Clock(CLOCK_50),
@@ -885,7 +827,6 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
     defparam AD4.DELAY = 24'd58594;
     defparam AD4.LFSR_SEED = 16'h9ABC;
     
-    // ============ ASTEROIDS FROM BOTTOM (moving up) - 4 asteroids ============
     asteroid_up AU1 (
         .Resetn(Resetn),
         .Clock(CLOCK_50),
@@ -966,7 +907,6 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
     defparam AU4.DELAY = 24'd43945;
     defparam AU4.LFSR_SEED = 16'hBABE;
     
-    // ============ ASTEROIDS FROM LEFT (moving right) - 4 asteroids ============
     asteroid_right AR1 (
         .Resetn(Resetn),
         .Clock(CLOCK_50),
@@ -1047,7 +987,6 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
     defparam AR4.DELAY = 24'd58594;
     defparam AR4.LFSR_SEED = 16'hF00D;
     
-    // ============ ASTEROIDS FROM RIGHT (moving left) - 4 asteroids ============
     asteroid_left AL1 (
         .Resetn(Resetn),
         .Clock(CLOCK_50),
@@ -1128,7 +1067,6 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
     defparam AL4.DELAY = 24'd54931;
     defparam AL4.LFSR_SEED = 16'hABCD;
    
-    // VGA Adapter
     vga_adapter VGA (
         .resetn(Resetn),
         .clock(CLOCK_50),
@@ -1147,14 +1085,6 @@ module asteroids_top (CLOCK_50, PS2_CLK, KEY, PS2_DAT, HEX5, HEX4,
 
 endmodule
 
-// ============================================================
-// ASTEROID MODULES - Each moves in one direction and respawns
-// Using initial blocks for FPGA initialization (since Resetn is always 1)
-// Using bit selection for random positions covering FULL screen range
-// Added frozen input and pos_x/pos_y outputs for collision detection
-// ============================================================
-
-// Asteroid moving DOWN (starts at top, respawns at random X when reaching bottom)
 module asteroid_down (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA_x, VGA_y, VGA_color, VGA_write, done, pos_x, pos_y);
     parameter nX = 10;
     parameter nY = 9;
@@ -1196,27 +1126,21 @@ module asteroid_down (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA
     reg [23:0] slow_count;
     reg needs_respawn;
     
-    // Output position for collision detection
     assign pos_x = X;
     assign pos_y = Y;
     
-    // Startup delay - 5 seconds at 50MHz = 250,000,000 cycles
     reg [27:0] startup_count;
     wire startup_done;
     assign startup_done = (startup_count >= 28'd250_000_000);
     
-    // LFSR for pseudo-random X position
     reg [15:0] lfsr;
     
-    // Random X: Full range 0-639
     wire [9:0] random_x;
     assign random_x = lfsr[9] ? ({2'b00, lfsr[7:0]} + 10'd384) : {1'b0, lfsr[8:0]};
     
-    // Y load value: YOFFSET for initial spawn, 0 (top edge) for respawn
     wire [nY-1:0] y_load_value;
     assign y_load_value = needs_respawn ? 9'd0 : YOFFSET;
     
-    // FPGA initialization
     initial begin
         lfsr = LFSR_SEED;
         X = XOFFSET;
@@ -1227,7 +1151,6 @@ module asteroid_down (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA
         startup_count = 28'd0;
     end
     
-    // Startup delay counter (resets on game_reset)
     always @(posedge Clock)
     begin
         if (game_reset)
@@ -1236,7 +1159,6 @@ module asteroid_down (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA
             startup_count <= startup_count + 28'd1;
     end
     
-    // LFSR - generates pseudo-random numbers (runs continuously)
     always @(posedge Clock)
     begin
         if (game_reset)
@@ -1245,7 +1167,6 @@ module asteroid_down (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA
             lfsr <= {lfsr[14:0], lfsr[15] ^ lfsr[14] ^ lfsr[12] ^ lfsr[3]};
     end
     
-    // X position register with random respawn (resets on game_reset)
     always @(posedge Clock)
     begin
         if (game_reset)
@@ -1259,7 +1180,6 @@ module asteroid_down (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA
         end
     end
     
-    // Y counter - loads y_load_value (0 for respawn, YOFFSET for initial)
     upDn_count_frozen_reset UY (y_load_value, Clock, Resetn, Ly, Ey, 1'b1, frozen, game_reset, YOFFSET, Y);
         defparam UY.n = nY;
     upDn_count U3 ({asteroid_x{1'd0}}, Clock, Resetn, Lxc, Exc, 1'b1, XC);
@@ -1267,7 +1187,6 @@ module asteroid_down (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA
     upDn_count U4 ({asteroid_y{1'd0}}, Clock, Resetn, Lyc, Eyc, 1'b1, YC);
         defparam U4.n = asteroid_y;
     
-    // Timing logic - only active after startup delay, stops when frozen, resets on game_reset
     always @(posedge Clock)
     begin
         if (game_reset)
@@ -1293,7 +1212,6 @@ module asteroid_down (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA
         end
     end
     
-    // Latched respawn flag (resets on game_reset)
     always @(posedge Clock)
     begin
         if (game_reset)
@@ -1307,7 +1225,6 @@ module asteroid_down (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA
         end
     end
     
-    // State machine
     always @(*)
         case (y_Q)
             A:  if (startup_done) Y_D = B;
@@ -1333,7 +1250,6 @@ module asteroid_down (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA
             default: Y_D = A;
         endcase
     
-    // Control signals
     always @(*)
     begin
         Lx = 1'b0; Ly = 1'b0; Ex = 1'b0; Ey = 1'b0; write = 1'b0;
@@ -1375,7 +1291,6 @@ module asteroid_down (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA
     assign VGA_color = erase ? 9'b000000000 : obj_color;
 endmodule
 
-// Asteroid moving UP (starts at bottom, respawns at random X when reaching top)
 module asteroid_up (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA_x, VGA_y, VGA_color, VGA_write, done, pos_x, pos_y);
     parameter nX = 10;
     parameter nY = 9;
@@ -1417,27 +1332,21 @@ module asteroid_up (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA_x
     reg [23:0] slow_count;
     reg needs_respawn;
     
-    // Output position for collision detection
     assign pos_x = X;
     assign pos_y = Y;
     
-    // Startup delay - 5 seconds at 50MHz = 250,000,000 cycles
     reg [27:0] startup_count;
     wire startup_done;
     assign startup_done = (startup_count >= 28'd250_000_000);
     
-    // LFSR for pseudo-random X position
     reg [15:0] lfsr;
     
-    // Random X: Full range 0-639
     wire [9:0] random_x;
     assign random_x = lfsr[9] ? ({2'b00, lfsr[7:0]} + 10'd384) : {1'b0, lfsr[8:0]};
     
-    // Y load value: YOFFSET for initial spawn, 479 (bottom edge) for respawn
     wire [nY-1:0] y_load_value;
     assign y_load_value = needs_respawn ? 9'd479 : YOFFSET;
     
-    // FPGA initialization
     initial begin
         lfsr = LFSR_SEED;
         X = XOFFSET;
@@ -1448,7 +1357,6 @@ module asteroid_up (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA_x
         startup_count = 28'd0;
     end
     
-    // Startup delay counter (resets on game_reset)
     always @(posedge Clock)
     begin
         if (game_reset)
@@ -1457,7 +1365,6 @@ module asteroid_up (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA_x
             startup_count <= startup_count + 28'd1;
     end
     
-    // LFSR
     always @(posedge Clock)
     begin
         if (game_reset)
@@ -1466,7 +1373,6 @@ module asteroid_up (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA_x
             lfsr <= {lfsr[14:0], lfsr[15] ^ lfsr[14] ^ lfsr[12] ^ lfsr[3]};
     end
     
-    // X position register (resets on game_reset)
     always @(posedge Clock)
     begin
         if (game_reset)
@@ -1480,7 +1386,6 @@ module asteroid_up (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA_x
         end
     end
     
-    // Y counter - moving UP (decrementing), loads y_load_value (479 for respawn)
     upDn_count_frozen_reset UY (y_load_value, Clock, Resetn, Ly, Ey, 1'b0, frozen, game_reset, YOFFSET, Y);
         defparam UY.n = nY;
     upDn_count U3 ({asteroid_x{1'd0}}, Clock, Resetn, Lxc, Exc, 1'b1, XC);
@@ -1488,7 +1393,6 @@ module asteroid_up (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA_x
     upDn_count U4 ({asteroid_y{1'd0}}, Clock, Resetn, Lyc, Eyc, 1'b1, YC);
         defparam U4.n = asteroid_y;
     
-    // Timing logic - only active after startup delay, stops when frozen, resets on game_reset
     always @(posedge Clock)
     begin
         if (game_reset)
@@ -1514,7 +1418,6 @@ module asteroid_up (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA_x
         end
     end
     
-    // Latched respawn flag (resets on game_reset)
     always @(posedge Clock)
     begin
         if (game_reset)
@@ -1528,7 +1431,6 @@ module asteroid_up (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA_x
         end
     end
     
-    // State machine
     always @(*)
         case (y_Q)
             A:  if (startup_done) Y_D = B;
@@ -1554,7 +1456,6 @@ module asteroid_up (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA_x
             default: Y_D = A;
         endcase
     
-    // Control signals
     always @(*)
     begin
         Lx = 1'b0; Ly = 1'b0; Ex = 1'b0; Ey = 1'b0; write = 1'b0;
@@ -1596,7 +1497,6 @@ module asteroid_up (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA_x
     assign VGA_color = erase ? 9'b000000000 : obj_color;
 endmodule
 
-// Asteroid moving RIGHT (starts at left, respawns at random Y when reaching right)
 module asteroid_right (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA_x, VGA_y, VGA_color, VGA_write, done, pos_x, pos_y);
     parameter nX = 10;
     parameter nY = 9;
@@ -1638,27 +1538,21 @@ module asteroid_right (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VG
     reg [23:0] slow_count;
     reg needs_respawn;
     
-    // Output position for collision detection
     assign pos_x = X;
     assign pos_y = Y;
     
-    // Startup delay - 5 seconds at 50MHz = 250,000,000 cycles
     reg [27:0] startup_count;
     wire startup_done;
     assign startup_done = (startup_count >= 28'd250_000_000);
     
-    // LFSR for pseudo-random Y position
     reg [15:0] lfsr;
     
-    // Random Y: Full range 0-479
     wire [8:0] random_y;
     assign random_y = lfsr[8] ? ({1'b0, lfsr[7:0]} + 9'd224) : {1'b0, lfsr[7:0]};
     
-    // X load value: XOFFSET for initial spawn, 0 (left edge) for respawn
     wire [nX-1:0] x_load_value;
     assign x_load_value = needs_respawn ? 10'd0 : XOFFSET;
     
-    // FPGA initialization
     initial begin
         lfsr = LFSR_SEED;
         Y = YOFFSET;
@@ -1669,7 +1563,6 @@ module asteroid_right (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VG
         startup_count = 28'd0;
     end
     
-    // Startup delay counter (resets on game_reset)
     always @(posedge Clock)
     begin
         if (game_reset)
@@ -1678,7 +1571,6 @@ module asteroid_right (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VG
             startup_count <= startup_count + 28'd1;
     end
     
-    // LFSR
     always @(posedge Clock)
     begin
         if (game_reset)
@@ -1687,7 +1579,6 @@ module asteroid_right (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VG
             lfsr <= {lfsr[14:0], lfsr[15] ^ lfsr[14] ^ lfsr[12] ^ lfsr[3]};
     end
     
-    // Y position register (resets on game_reset)
     always @(posedge Clock)
     begin
         if (game_reset)
@@ -1701,7 +1592,6 @@ module asteroid_right (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VG
         end
     end
     
-    // X counter - moving RIGHT (incrementing), loads x_load_value (0 for respawn)
     upDn_count_frozen_reset UX (x_load_value, Clock, Resetn, Lx, Ex, 1'b1, frozen, game_reset, XOFFSET, X);
         defparam UX.n = nX;
     upDn_count U3 ({asteroid_x{1'd0}}, Clock, Resetn, Lxc, Exc, 1'b1, XC);
@@ -1709,7 +1599,6 @@ module asteroid_right (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VG
     upDn_count U4 ({asteroid_y{1'd0}}, Clock, Resetn, Lyc, Eyc, 1'b1, YC);
         defparam U4.n = asteroid_y;
     
-    // Timing logic - only active after startup delay, stops when frozen, resets on game_reset
     always @(posedge Clock)
     begin
         if (game_reset)
@@ -1735,7 +1624,6 @@ module asteroid_right (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VG
         end
     end
     
-    // Latched respawn flag (resets on game_reset)
     always @(posedge Clock)
     begin
         if (game_reset)
@@ -1749,7 +1637,6 @@ module asteroid_right (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VG
         end
     end
     
-    // State machine
     always @(*)
         case (y_Q)
             A:  if (startup_done) Y_D = B;
@@ -1775,7 +1662,6 @@ module asteroid_right (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VG
             default: Y_D = A;
         endcase
     
-    // Control signals
     always @(*)
     begin
         Lx = 1'b0; Ly = 1'b0; Ex = 1'b0; Ey = 1'b0; write = 1'b0;
@@ -1817,7 +1703,6 @@ module asteroid_right (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VG
     assign VGA_color = erase ? 9'b000000000 : obj_color;
 endmodule
 
-// Asteroid moving LEFT (starts at right, respawns at random Y when reaching left)
 module asteroid_left (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA_x, VGA_y, VGA_color, VGA_write, done, pos_x, pos_y);
     parameter nX = 10;
     parameter nY = 9;
@@ -1859,27 +1744,21 @@ module asteroid_left (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA
     reg [23:0] slow_count;
     reg needs_respawn;
     
-    // Output position for collision detection
     assign pos_x = X;
     assign pos_y = Y;
     
-    // Startup delay - 5 seconds at 50MHz = 250,000,000 cycles
     reg [27:0] startup_count;
     wire startup_done;
     assign startup_done = (startup_count >= 28'd250_000_000);
     
-    // LFSR for pseudo-random Y position
     reg [15:0] lfsr;
     
-    // Random Y: Full range 0-479
     wire [8:0] random_y;
     assign random_y = lfsr[8] ? ({1'b0, lfsr[7:0]} + 9'd224) : {1'b0, lfsr[7:0]};
     
-    // X load value: XOFFSET for initial spawn, 639 (right edge) for respawn
     wire [nX-1:0] x_load_value;
     assign x_load_value = needs_respawn ? 10'd639 : XOFFSET;
     
-    // FPGA initialization
     initial begin
         lfsr = LFSR_SEED;
         Y = YOFFSET;
@@ -1890,7 +1769,6 @@ module asteroid_left (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA
         startup_count = 28'd0;
     end
     
-    // Startup delay counter (resets on game_reset)
     always @(posedge Clock)
     begin
         if (game_reset)
@@ -1899,7 +1777,6 @@ module asteroid_left (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA
             startup_count <= startup_count + 28'd1;
     end
     
-    // LFSR
     always @(posedge Clock)
     begin
         if (game_reset)
@@ -1908,7 +1785,6 @@ module asteroid_left (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA
             lfsr <= {lfsr[14:0], lfsr[15] ^ lfsr[14] ^ lfsr[12] ^ lfsr[3]};
     end
     
-    // Y position register (resets on game_reset)
     always @(posedge Clock)
     begin
         if (game_reset)
@@ -1922,7 +1798,6 @@ module asteroid_left (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA
         end
     end
     
-    // X counter - moving LEFT (decrementing), loads x_load_value (639 for respawn)
     upDn_count_frozen_reset UX (x_load_value, Clock, Resetn, Lx, Ex, 1'b0, frozen, game_reset, XOFFSET, X);
         defparam UX.n = nX;
     upDn_count U3 ({asteroid_x{1'd0}}, Clock, Resetn, Lxc, Exc, 1'b1, XC);
@@ -1930,7 +1805,6 @@ module asteroid_left (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA
     upDn_count U4 ({asteroid_y{1'd0}}, Clock, Resetn, Lyc, Eyc, 1'b1, YC);
         defparam U4.n = asteroid_y;
     
-    // Timing logic - only active after startup delay, stops when frozen, resets on game_reset
     always @(posedge Clock)
     begin
         if (game_reset)
@@ -1956,7 +1830,6 @@ module asteroid_left (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA
         end
     end
     
-    // Latched respawn flag (resets on game_reset)
     always @(posedge Clock)
     begin
         if (game_reset)
@@ -1970,7 +1843,6 @@ module asteroid_left (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA
         end
     end
     
-    // State machine
     always @(*)
         case (y_Q)
             A:  if (startup_done) Y_D = B;
@@ -1996,7 +1868,6 @@ module asteroid_left (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA
             default: Y_D = A;
         endcase
     
-    // Control signals
     always @(*)
     begin
         Lx = 1'b0; Ly = 1'b0; Ex = 1'b0; Ey = 1'b0; write = 1'b0;
@@ -2038,11 +1909,6 @@ module asteroid_left (Resetn, Clock, gnt, frozen, game_reset, force_respawn, VGA
     assign VGA_color = erase ? 9'b000000000 : obj_color;
 endmodule
 
-// ============================================================
-// HELPER MODULES
-// ============================================================
-
-// Synchronizer module
 module sync (D, Resetn, Clock, Q);
     input wire D, Resetn, Clock;
     output reg Q;
@@ -2061,7 +1927,6 @@ module sync (D, Resetn, Clock, Q);
         end
 endmodule
 
-// Register module
 module regn (R, Reset, enable, clk, Q);
     parameter n = 8;
     input wire [n-1:0] R;
@@ -2075,7 +1940,6 @@ module regn (R, Reset, enable, clk, Q);
             Q <= R;
 endmodule
 
-// Up/down counter with step size
 module upDn_count_step (R, Clock, Resetn, L, E, Dir, Step, Q);
     parameter n = 8;
     input wire [n-1:0] R;
@@ -2095,7 +1959,6 @@ module upDn_count_step (R, Clock, Resetn, L, E, Dir, Step, Q);
                 Q <= Q - Step;
 endmodule
 
-// Up/down counter with step size and frozen input
 module upDn_count_step_frozen (R, Clock, Resetn, L, E, Dir, Step, frozen, Q);
     parameter n = 8;
     input wire [n-1:0] R;
@@ -2115,7 +1978,6 @@ module upDn_count_step_frozen (R, Clock, Resetn, L, E, Dir, Step, frozen, Q);
                 Q <= Q - Step;
 endmodule
 
-// Up/down counter (increment by 1)
 module upDn_count (R, Clock, Resetn, L, E, Dir, Q);
     parameter n = 8;
     input wire [n-1:0] R;
@@ -2134,7 +1996,6 @@ module upDn_count (R, Clock, Resetn, L, E, Dir, Q);
                 Q <= Q - {{n-1{1'b0}},1'b1};
 endmodule
 
-// Up/down counter with frozen input (for asteroids)
 module upDn_count_frozen (R, Clock, Resetn, L, E, Dir, frozen, Q);
     parameter n = 8;
     input wire [n-1:0] R;
@@ -2153,7 +2014,6 @@ module upDn_count_frozen (R, Clock, Resetn, L, E, Dir, frozen, Q);
                 Q <= Q - {{n-1{1'b0}},1'b1};
 endmodule
 
-// Up/down counter with frozen and game_reset inputs (for asteroids)
 module upDn_count_frozen_reset (R, Clock, Resetn, L, E, Dir, frozen, game_reset, reset_val, Q);
     parameter n = 8;
     input wire [n-1:0] R;
@@ -2175,7 +2035,6 @@ module upDn_count_frozen_reset (R, Clock, Resetn, L, E, Dir, frozen, game_reset,
                 Q <= Q - {{n-1{1'b0}},1'b1};
 endmodule
 
-// Ship module with rotation - controlled by WASD
 module ship (Resetn, Clock, ps2_rec, key_W, key_A, key_S, key_D, 
              VGA_x, VGA_y, VGA_color, VGA_write, done, reset, frozen, pos_x, pos_y, dir_out);
     parameter nX = 10;
@@ -2231,7 +2090,6 @@ module ship (Resetn, Clock, ps2_rec, key_W, key_A, key_S, key_D,
     assign X0 = XOFFSET;
     assign Y0 = YOFFSET;
     
-    // Output position for collision detection
     assign pos_x = X;
     assign pos_y = Y;
     assign dir_out = direction;
@@ -2396,10 +2254,6 @@ module ship (Resetn, Clock, ps2_rec, key_W, key_A, key_S, key_D,
     assign VGA_color = erase ? {9{1'b0}} : obj_color;
 endmodule
 
-// ============================================================
-// SCREEN CLEAR MODULE
-// Clears the entire 640x480 screen to black
-// ============================================================
 module screen_clear (Clock, start, x, y, write, active, done);
     parameter nX = 10;
     parameter nY = 9;
@@ -2455,7 +2309,6 @@ module screen_clear (Clock, start, x, y, write, active, done);
                         y <= y + 1'b1;
                     end
                     else begin
-                        // Finished clearing
                         write <= 1'b0;
                         active <= 1'b0;
                         done <= 1'b1;
@@ -2476,19 +2329,16 @@ module screen_clear (Clock, start, x, y, write, active, done);
     end
 endmodule
 
-// ============================================================
-// BULLET MODULE - 2x2 white pixel, fired from ship
-// ============================================================
 module bullet (Resetn, Clock, gnt, frozen, game_reset, fire, ship_x, ship_y, ship_dir, hit,
                VGA_x, VGA_y, VGA_color, VGA_write, done, active, pos_x, pos_y);
     parameter nX = 10;
     parameter nY = 9;
-    parameter bullet_x = 1;  // 2x2 bullet
+    parameter bullet_x = 1;  
     parameter bullet_y = 1;
-    parameter BOX_SIZE_X = 1 << bullet_x;  // 2
-    parameter BOX_SIZE_Y = 1 << bullet_y;  // 2
+    parameter BOX_SIZE_X = 1 << bullet_x;  
+    parameter BOX_SIZE_Y = 1 << bullet_y;  
     parameter INIT_FILE = "./MIF/bullet_2_2_9.mif";
-    parameter DELAY = 20'd12500;  // Fast bullet speed
+    parameter DELAY = 20'd12500;  
     
     parameter IDLE = 4'd0, WAIT_TICK = 4'd1, ERASE1 = 4'd2, ERASE2 = 4'd3,
               MOVE = 4'd4, DRAW1 = 4'd5, DRAW2 = 4'd6, DONE_ST = 4'd7,
@@ -2523,19 +2373,15 @@ module bullet (Resetn, Clock, gnt, frozen, game_reset, fire, ship_x, ship_y, shi
     reg [19:0] slow_count;
     reg tick;
     
-    // Output position for collision detection
     assign pos_x = X;
     assign pos_y = Y;
     
-    // Check if bullet is out of bounds
     wire out_of_bounds;
     assign out_of_bounds = (X < 10'd8) || (X > 10'd632) || (Y < 9'd8) || (Y > 9'd472);
     
-    // Need to deactivate when hit or out of bounds
     wire need_deactivate;
     assign need_deactivate = hit || out_of_bounds;
     
-    // Initialize
     initial begin
         X = 10'd320;
         Y = 9'd240;
@@ -2551,7 +2397,6 @@ module bullet (Resetn, Clock, gnt, frozen, game_reset, fire, ship_x, ship_y, shi
         done = 0;
     end
     
-    // Speed tick generator
     always @(posedge Clock)
     begin
         if (game_reset || !active)
@@ -2576,7 +2421,6 @@ module bullet (Resetn, Clock, gnt, frozen, game_reset, fire, ship_x, ship_y, shi
             tick <= 1'b0;
     end
     
-    // Main state machine
     always @(posedge Clock)
     begin
         if (game_reset)
@@ -2601,7 +2445,6 @@ module bullet (Resetn, Clock, gnt, frozen, game_reset, fire, ship_x, ship_y, shi
                     erase <= 1'b0;
                     if (fire && !active && !frozen)
                     begin
-                        // Spawn bullet at front edge of ship
                         active <= 1'b1;
                         direction <= ship_dir;
                         case (ship_dir)
@@ -2614,7 +2457,6 @@ module bullet (Resetn, Clock, gnt, frozen, game_reset, fire, ship_x, ship_y, shi
                     end
                     else if (gnt)
                     begin
-                        // Not active, immediately signal done
                         done <= 1'b1;
                         state <= DONE_ST;
                     end
@@ -2625,7 +2467,6 @@ module bullet (Resetn, Clock, gnt, frozen, game_reset, fire, ship_x, ship_y, shi
                     write <= 1'b0;
                     if (gnt && tick)
                     begin
-                        // Check if we need to deactivate
                         if (need_deactivate)
                         begin
                             XC <= 0;
@@ -2641,7 +2482,6 @@ module bullet (Resetn, Clock, gnt, frozen, game_reset, fire, ship_x, ship_y, shi
                     end
                 end
                 
-                // Normal erase cycle
                 ERASE1: begin
                     if (gnt)
                     begin
@@ -2678,7 +2518,6 @@ module bullet (Resetn, Clock, gnt, frozen, game_reset, fire, ship_x, ship_y, shi
                 MOVE: begin
                     write <= 1'b0;
                     erase <= 1'b0;
-                    // Move bullet
                     case (direction)
                         DIR_UP:    Y <= Y - 9'd2;
                         DIR_DOWN:  Y <= Y + 9'd2;
@@ -2690,7 +2529,6 @@ module bullet (Resetn, Clock, gnt, frozen, game_reset, fire, ship_x, ship_y, shi
                     state <= DRAW1;
                 end
                 
-                // Draw cycle
                 DRAW1: begin
                     if (gnt)
                     begin
@@ -2735,7 +2573,6 @@ module bullet (Resetn, Clock, gnt, frozen, game_reset, fire, ship_x, ship_y, shi
                         state <= IDLE;
                 end
                 
-                // Deactivation erase cycle - erase then deactivate
                 DEACTIVATE_ERASE1: begin
                     if (gnt)
                     begin
@@ -2784,13 +2621,11 @@ module bullet (Resetn, Clock, gnt, frozen, game_reset, fire, ship_x, ship_y, shi
         end
     end
     
-    // Bullet sprite memory
     object_mem U6 ({YC,XC}, Clock, obj_color);
         defparam U6.n = 9;
         defparam U6.Mn = bullet_x + bullet_y;
         defparam U6.INIT_FILE = INIT_FILE;
     
-    // VGA output
     assign VGA_x = X - (size_x >> 1) + XC;
     assign VGA_y = Y - (size_y >> 1) + YC;
     assign VGA_write = write;
