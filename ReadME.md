@@ -1,6 +1,6 @@
-## Overview
+## Asteroids
 
-Navigate your spaceship through waves of asteroids coming from all four directions. The game tests your reflexes and navigation skills as you try to survive as long as possible. Your survival time is displayed on the board's HEX displays, tracking every second you stay alive.
+Navigate your spaceship through waves of asteroids coming from all four directions while defending yourself with rapid-fire bullets. The game tests your reflexes and navigation skills as you try to survive as long as possible. Your survival time is displayed on the board's HEX displays, tracking every second you stay alive.
 
 The complete Verilog implementation can be found in the 'Game_Code' directory.
 
@@ -17,10 +17,11 @@ The complete Verilog implementation can be found in the 'Game_Code' directory.
 
 1. **Start**: The game begins automatically when powered on
 2. **Movement**: Use WASD keys to navigate your spaceship around the 640×480 screen
-3. **Objective**: Dodge the asteroids coming from all four sides of the screen
-4. **Collision**: The game freezes when your ship collides with any asteroid
-5. **Timer**: The HEX displays count up from 000000, showing your survival time in seconds
-6. **Reset**: Press KEY[0] to clear the screen and restart
+3. **Combat**: Press SPACEBAR to fire bullets in the direction your ship is facing
+4. **Objective**: Dodge the asteroids coming from all four sides and destroy them with your bullets
+5. **Collision**: The game freezes when your ship collides with any asteroid
+6. **Timer**: The HEX displays count up from 000000, showing your survival time in seconds
+7. **Reset**: Press KEY[0] to clear the screen and restart
 
 ### Controls
 
@@ -28,6 +29,7 @@ The complete Verilog implementation can be found in the 'Game_Code' directory.
 - **A** - Turn left 
 - **S** - Move backward
 - **D** - Turn right
+- **SPACEBAR** - Fire bullets
 - **KEY[0]** - Reset game
 
 ### Game Preview
