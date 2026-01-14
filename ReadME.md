@@ -33,3 +33,5 @@ The complete Verilog implementation can be found in the 'Game_Code' directory.
 ### Game Preview
 ![20260107_205118](https://github.com/user-attachments/assets/2e8057c6-02f0-4d5f-a76b-05231ea0d059)
 
+![another_photo](https://github.com/user-attachments/assets/3970d3a4-d557-42cf-b988-931dacbfd524)
+
